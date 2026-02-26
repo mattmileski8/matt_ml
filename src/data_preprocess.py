@@ -91,6 +91,9 @@ clean_columns = [
     r"$\mu$",                      # Dipole Moment
     r"$\varepsilon_{I}$",              # Adiabatic IE
     r"$\varepsilon_{c}$",            # Cohesive Energy
+    r"$m$",           # Molecular Mass
+    r"$n_{e}$",           # Number of electrons
+    r"$V$",           # Molecular Volume
     "DS"
 ]
 

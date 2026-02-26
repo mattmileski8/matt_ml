@@ -32,12 +32,15 @@ class LrChangePrinter(keras.callbacks.Callback):
 # Define the column names based on the header
 columns = [
     "Molecule",
-    "Vibrational ZPE (cm^-1)",
-    "Polarizability (Å^3)",
-    "Dipole Moment (Debye)",
-    "Adiabatic IE (eV)",
-    "Cohesive Energy (kJ/mol)",
-    "Breakdown Voltage (MV/m)"
+    "Vibrational ZPE",
+    "Polarizability",
+    "Dipole Moment",
+    "Adiabatic IE",
+    "Cohesive Energy",
+    "Breakdown Voltage", 
+    "Molecular Mass",
+    "Number e-",
+    "Molecular Volume"
 ]
 
 # Load the file
@@ -81,56 +84,6 @@ for col in columns[1:]:
 
 # Preview the result
 print(df)
-
-#-----------------------------------------------------------------------------
-# Compute Pearson correlations between each feature and target and full matrix
-#-----------------------------------------------------------------------------
-
-clean_columns = [
-    r"$\varepsilon_{V}$",   # Vibrational ZPE 
-    r"$\alpha$",                   # Polarizability
-    r"$\mu$",                      # Dipole Moment
-    r"$\varepsilon_{I}$",              # Adiabatic IE
-    r"$\varepsilon_{c}$",            # Cohesive Energy
-    "DS"
-]
-
-df.columns = clean_columns
-
-feature_names = clean_columns[0:-1]   # all input features
-target_col = clean_columns[-1]        # breakdown strength, not used right now
-
-# correlations = df.corr(method='pearson')[[target_col]].loc[feature_names]
-
-# print("\n Pearson Correlation (r) with Breakdown Strength:")
-# print(correlations)
-
-# corr_matrix = df.corr(method='pearson')
-
-
-# select only the five feature columns
-feature_df = df[feature_names]
-
-# Pearson correlation matrix of features only
-corr_matrix = feature_df.corr(method='pearson')
-
-plt.figure(figsize=(8, 6))
-sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", fmt=".2f", square=True, annot_kws={"size": 18})
-plt.xticks(rotation=0, ha='right', fontsize=18)
-plt.yticks(rotation=0, ha='right', fontsize=18)
-# plt.xlabel(fontsize=8.5)
-# plt.ylabel(fontsize=8.5)
-#plt.title("Pearson Correlation Matrix")
-
-cbar = plt.gcf().axes[-1]
-cbar.tick_params(labelsize=18)
-
-plt.tight_layout()
-plt.savefig(f"./results/pearson_correlation_heatmap.png", dpi=300)
-plt.close()
-
-
-#------------------------------------------------------------------------------------
 
 
 
