@@ -43,86 +43,53 @@ columns = [
     "Molecular Volume"
 ]
 
-# Load the file
-with open('./data/molecular_data.txt', "r") as file:
-    lines = file.readlines()
+# Load the dataframe saved from preprocessing
+df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
-data = []
-
-for line in lines:
-    # Remove leading/trailing whitespace
-    line = line.strip()
-    if not line or line.startswith("Molecule"):
-        continue  # Skip empty and header lines
-
-    # Match molecule name (non-numeric part at the start)
-    match = re.match(r'^(\S+)', line)
-    if match:
-        molecule = match.group(1)
-        # Extract all numbers (scientific notation or float)
-        values = re.findall(r'[-+]?\d*\.\d+e[+-]?\d+|[-+]?\d+\.\d+|[-+]?\d+', line[len(molecule):])
-        # Fill missing values with None (so all rows have 6 columns)
-        while len(values) < 6:
-            values.append(None)
-        data.append([molecule] + values)
-
-# Convert to DataFrame
-df = pd.DataFrame(data, columns=columns)
-df = df.replace("", pd.NA).dropna()
-
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-print(len(df))
-
-names = df["Molecule"]
-
-df = df.drop(columns=["Molecule"])
-
-# Convert numeric columns to float
-for col in columns[1:]:
-    df[col] = pd.to_numeric(df[col], errors='coerce')
-
-# Preview the result
-print(df)
+# verify
+print(df.head())
+print(df.dtypes)
 
 
 
-# # Separate features (X) and target (y)
-# X = df.drop(columns=["Breakdown Voltage (MV/m)"])  # all columns except target
-# y = df["Breakdown Voltage (MV/m)"]                 # target column
+# Separate features (X) and target (y)
+X = df.drop(columns=["Breakdown Voltage"])  # all columns except target
+y = df["Breakdown Voltage"]                 # target column
 
-# scaler_X = StandardScaler()
-# X_scaled = scaler_X.fit_transform(X)
+scaler_X = StandardScaler()
+X_scaled = scaler_X.fit_transform(X)
 
-# scaler_y = StandardScaler()
-# y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
+scaler_y = StandardScaler()
+y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
-# X_input = np.array(X_scaled)
-# y_input = np.array(y_scaled)
-
-
-# early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
-
-# #log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-# #tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-
-# numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
-# hidden1 = keras.layers.Dense(16, activation='relu')(numerical_input)
-# hidden1 = keras.layers.Dropout(0.1)(hidden1)
-# hidden2 = keras.layers.Dense(16, activation='relu')(hidden1)
-# hidden2 = keras.layers.Dropout(0.1)(hidden2)
-# #concat = keras.layers.Concatenate()([numerical_input,hidden3])
-# output = keras.layers.Dense(1)(hidden2)
-# model = keras.Model(inputs=numerical_input, outputs=output)
-
-# # ---- Stage 1: Train with validation + LR scheduling ----
+X_input = np.array(X_scaled)
+y_input = np.array(y_scaled)
 
 
-# model.compile(
-#     optimizer=keras.optimizers.Adam(learning_rate=1e-2),  # Stage 1 LR
-#     loss='mean_squared_error',
-#     metrics=['mae']
-# )
+early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
+
+log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+# tensorboard --logdir logs/fit
+
+numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
+hidden1 = keras.layers.Dense(8, activation='relu')(numerical_input)
+hidden1 = keras.layers.Dropout(0.1)(hidden1)
+hidden2 = keras.layers.Dense(8, activation='relu')(hidden1)
+hidden2 = keras.layers.Dropout(0.1)(hidden2)
+#concat = keras.layers.Concatenate()([numerical_input,hidden3])
+output = keras.layers.Dense(1)(hidden2)
+model = keras.Model(inputs=numerical_input, outputs=output)
+
+# ---- Stage 1: Train with validation + LR scheduling ----
+
+
+model.compile(
+    optimizer=keras.optimizers.Adam(learning_rate=1e-2),  # Stage 1 LR
+    loss='mean_squared_error',
+    metrics=['mae']
+)
 
 # lr_schedule = keras.callbacks.ReduceLROnPlateau(
 #     monitor='val_loss',
@@ -132,16 +99,16 @@ print(df)
 #     verbose=1
 # )
 
-# hist1 = model.fit(
-#     X_input, y_input,
-#     epochs=2000,
-#     batch_size=8,
-#     validation_split=0.2,
-#     callbacks=[early_stopping, lr_schedule, LrChangePrinter()],
-#     verbose=1
-# )
+hist1 = model.fit(
+    X_input, y_input,
+    epochs=2000,
+    batch_size=4,
+    validation_split=0.2,
+    callbacks=[early_stopping, tensorboard_callback], #lr_schedule, LrChangePrinter()],
+    verbose=1
+)
 
-# print("Best Stage 1 val_loss:", min(hist1.history['val_loss']))
+print("Best Stage 1 val_loss:", min(hist1.history['val_loss']))
 
 
 # # ---- Stage 2: Fine-tune using all data (no validation) ----
