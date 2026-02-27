@@ -96,12 +96,12 @@ y_test_input = y_test_input.ravel()
 
 
 # Create Optuna study
-study = optuna.create_study(direction="minimize",
+study = optuna.create_study(direction="maximize",
                             study_name="molecular_rf",
                             storage="sqlite:///molecular_rf_optuna.db",
                             load_if_exists=True
                             )
-study.optimize(objective, n_trials=1000, show_progress_bar=True)
+study.optimize(objective, n_trials=500, show_progress_bar=True)
 
 # Best hyperparameters
 print("Best hyperparameters:", study.best_params)
