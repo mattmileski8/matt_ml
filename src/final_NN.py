@@ -75,9 +75,9 @@ tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_fr
 
 numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
 hidden1 = keras.layers.Dense(8, activation='relu')(numerical_input)
-hidden1 = keras.layers.Dropout(0.1)(hidden1)
+#hidden1 = keras.layers.Dropout(0.1)(hidden1)
 hidden2 = keras.layers.Dense(8, activation='relu')(hidden1)
-hidden2 = keras.layers.Dropout(0.1)(hidden2)
+#hidden2 = keras.layers.Dropout(0.1)(hidden2)
 #concat = keras.layers.Concatenate()([numerical_input,hidden3])
 output = keras.layers.Dense(1)(hidden2)
 model = keras.Model(inputs=numerical_input, outputs=output)
@@ -91,13 +91,6 @@ model.compile(
     metrics=['mae']
 )
 
-# lr_schedule = keras.callbacks.ReduceLROnPlateau(
-#     monitor='val_loss',
-#     factor=0.3,
-#     patience=15,
-#     min_lr=1e-5,
-#     verbose=1
-# )
 
 hist1 = model.fit(
     X_input, y_input,

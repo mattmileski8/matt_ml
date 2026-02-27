@@ -77,8 +77,8 @@ for col in columns[1:]:
 #print(df)
 #print(len(df))
 
-#df.to_csv("./data/molecular_data_sorted.txt", sep="\t", index=False)
-#names.to_csv("./data/molecular_names_sorted.txt", sep="\t", index=False)
+df.to_csv("./data/molecular_data_sorted.txt", sep="\t", index=False)
+names.to_csv("./data/molecular_names_sorted.txt", sep="\t", index=False)
 
 
 #-------------Prediction Dataset----------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ for line in lines:
         data.append([molecule] + values)
 
 # Convert to DataFrame
-df_tm = pd.DataFrame(data, columns=columns)
+df_tm = pd.DataFrame(data, columns=columns_tm)
 df_tm = df_tm.replace("", pd.NA).dropna()
 
 pd.set_option('display.max_rows', None)
@@ -136,12 +136,62 @@ for col in columns_tm[1:]:
     df_tm[col] = pd.to_numeric(df_tm[col], errors='coerce')
 
 # Preview the result
+# print(df)
+# print(len(df_tm))
+
+df_tm.to_csv("./data/molecular_tm_data_sorted.txt", sep="\t", index=False)
+names_tm.to_csv("./data/molecular__tm_names_sorted.txt", sep="\t", index=False)
+
+
+
+# ----------------seven test mols------------------------------------------------------------
+
+# Load the file
+with open('./data/seven_test_mol.txt', "r") as file:
+    lines = file.readlines()
+
+data = []
+
+for line in lines:
+    # Remove leading/trailing whitespace
+    line = line.strip()
+    if not line or line.startswith("Molecule"):
+        continue  # Skip empty and header lines
+
+    # Match molecule name (non-numeric part at the start)
+    match = re.match(r'^(\S+)', line)
+    if match:
+        molecule = match.group(1)
+        # Extract all numbers (scientific notation or float)
+        values = re.findall(r'[-+]?\d*\.\d+e[+-]?\d+|[-+]?\d+\.\d+|[-+]?\d+', line[len(molecule):])
+        # Fill missing values with None (so all rows have 6 columns)
+        while len(values) < 6:
+            values.append(None)
+        data.append([molecule] + values)
+
+# Convert to DataFrame
+df_test = pd.DataFrame(data, columns=columns)
+df_test = df_test.replace("", pd.NA).dropna()
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+
+df_test = df_test.reset_index(drop=True)
+names_test = df_test["Molecule"]
+
+df_test = df_test.drop(columns=["Molecule"])
+
+
+# Convert numeric columns to float
+for col in columns[1:]:
+    df_test[col] = pd.to_numeric(df_test[col], errors='coerce')
+
+# Preview the result
 #print(df)
-print(len(df_tm))
+print(len(df))
 
-df_tm.to_csv("./data/molecular_data_sorted.txt", sep="\t", index=False)
-names_tm.to_csv("./data/molecular_names_sorted.txt", sep="\t", index=False)
-
+df_test.to_csv("./data/test_seven_sorted.txt", sep="\t", index=False)
+names_test.to_csv("./data/test_seven_names_sorted.txt", sep="\t", index=False)
 
 
 
