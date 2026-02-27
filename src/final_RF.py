@@ -33,6 +33,8 @@ columns = [
 df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
 df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
+
+
 #----------Train initial model
 data_train, data_test = train_test_split(df, test_size=0.1, random_state=42)
 
@@ -42,16 +44,6 @@ X_test = data_test.drop(columns=['Breakdown Voltage (MV/m)'])
 y_train = data_train[['Breakdown Voltage (MV/m)']]
 y_test = data_test[['Breakdown Voltage (MV/m)']]
 
-# Scale only features
-scaler = StandardScaler()
-X_train = pd.DataFrame(scaler.fit_transform(X_train), columns=X_train.columns)
-X_test = pd.DataFrame(scaler.transform(X_test), columns=X_test.columns)
-
-#scaler_label = StandardScaler()
-#y_train = scaler_label.fit_transform(y_train)
-#y_test = scaler_label.transform(y_test)
-
-#print(np.sqrt(.1737)*scaler_label.scale_[0])
 
 # Convert to np arrays
 X_train_input = np.array(X_train)
