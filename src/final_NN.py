@@ -74,19 +74,17 @@ tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_fr
 # tensorboard --logdir logs/fit
 
 numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
-hidden1 = keras.layers.Dense(8, activation='relu')(numerical_input)
+hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
 #hidden1 = keras.layers.Dropout(0.1)(hidden1)
-hidden2 = keras.layers.Dense(8, activation='relu')(hidden1)
+hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
 #hidden2 = keras.layers.Dropout(0.1)(hidden2)
 #concat = keras.layers.Concatenate()([numerical_input,hidden3])
 output = keras.layers.Dense(1)(hidden2)
 model = keras.Model(inputs=numerical_input, outputs=output)
 
-# ---- Stage 1: Train with validation + LR scheduling ----
-
 
 model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=1e-2),  # Stage 1 LR
+    optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
     loss='mean_squared_error',
     metrics=['mae']
 )
@@ -96,8 +94,8 @@ hist1 = model.fit(
     X_input, y_input,
     epochs=2000,
     batch_size=4,
-    validation_split=0.2,
-    callbacks=[early_stopping, tensorboard_callback], #lr_schedule, LrChangePrinter()],
+    validation_split=0.15,
+    callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
     verbose=1
 )
 
