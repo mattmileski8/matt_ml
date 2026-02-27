@@ -18,48 +18,20 @@ from sklearn.metrics import make_scorer
 # Define the column names based on the header
 columns = [
     "Molecule",
-    "Vibrational ZPE (cm^-1)",
-    "Polarizability (Å^3)",
-    "Dipole Moment (Debye)",
-    "Adiabatic IE (eV)",
-    "Cohesive Energy (kJ/mol)",
-    "Breakdown Voltage (MV/m)"
+    "Vibrational ZPE",
+    "Polarizability",
+    "Dipole Moment",
+    "Adiabatic IE",
+    "Cohesive Energy",
+    "Breakdown Voltage", 
+    "Molecular Mass",
+    "Number e-",
+    "Molecular Volume"
 ]
 
-
-# Load the file
-with open('./data/molecular_data.txt', "r") as file:
-    lines = file.readlines()
-
-data = []
-
-for line in lines:
-    # Remove leading/trailing whitespace
-    line = line.strip()
-    if not line or line.startswith("Molecule"):
-        continue  # Skip empty and header lines
-
-    # Match molecule name (non-numeric part at the start)
-    match = re.match(r'^(\S+)', line)
-    if match:
-        molecule = match.group(1)
-        # Extract all numbers (scientific notation or float)
-        values = re.findall(r'[-+]?\d*\.\d+e[+-]?\d+|[-+]?\d+\.\d+|[-+]?\d+', line[len(molecule):])
-        # Fill missing values with None (so all rows have 6 columns)
-        while len(values) < 6:
-            values.append(None)
-        data.append([molecule] + values)
-
-# Convert to DataFrame
-df = pd.DataFrame(data, columns=columns)
-df = df.replace("", pd.NA).dropna()
-
-names = df["Molecule"]
-df = df.drop(columns=["Molecule"])
-
-# Convert numeric columns to float
-for col in columns[1:]:
-    df[col] = pd.to_numeric(df[col], errors='coerce')
+# Load the dataframe saved from preprocessing
+df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
 #----------Train initial model
 data_train, data_test = train_test_split(df, test_size=0.1, random_state=42)
