@@ -63,14 +63,14 @@ print(df.dtypes)
 X = df.drop(columns=["Breakdown Voltage"])  # all columns except target
 y = df["Breakdown Voltage"]                 # target column
 
-scaler_X = StandardScaler()
-X_scaled = scaler_X.fit_transform(X)
+# scaler_X = StandardScaler()
+# X_scaled = scaler_X.fit_transform(X)
 
-scaler_y = StandardScaler()
-y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
+# scaler_y = StandardScaler()
+# y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
-joblib.dump(scaler_X, "./models/final_NN_scaler_X.pkl")
-joblib.dump(scaler_y, "./models/final_NN_scaler_y.pkl")
+# #joblib.dump(scaler_X, "./models/final_NN_scaler_X.pkl")
+# #joblib.dump(scaler_y, "./models/final_NN_scaler_y.pkl")
 
 # X_input = np.array(X_scaled)
 # y_input = np.array(y_scaled)
