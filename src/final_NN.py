@@ -84,8 +84,8 @@ hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
 hidden1 = keras.layers.Dropout(0.1)(hidden1)
 hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
 hidden2 = keras.layers.Dropout(0.1)(hidden2)
-#concat = keras.layers.Concatenate()([numerical_input,hidden3])
-output = keras.layers.Dense(1)(hidden2)
+concat = keras.layers.Concatenate()([numerical_input,hidden2])
+output = keras.layers.Dense(1)(concat)
 model = keras.Model(inputs=numerical_input, outputs=output)
 
 
@@ -98,12 +98,15 @@ model.compile(
 
 hist1 = model.fit(
     X_input, y_input,
-    epochs=15000,
+    epochs=5600,
     batch_size=4,
     validation_split=0.15,
     callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
     verbose=1
+    #shuffle=False
 )
+
+model.save("models/final_NN_model_concat_layer.keras")
 
 print("Best Stage 1 val_loss:", min(hist1.history['val_loss']))
 
