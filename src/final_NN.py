@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 import joblib
 import seaborn as sns
-
+import random
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 import tensorflow as tf
@@ -28,6 +28,12 @@ class LrChangePrinter(keras.callbacks.Callback):
             print(f"\n Learning rate changed from {self.prev_lr:.5f} → {lr:.5f} at epoch {epoch+1}")
             self.prev_lr = lr
 
+
+SEED = 42
+
+random.seed(SEED)
+np.random.seed(SEED)
+tf.random.set_seed(SEED)
 
 # Define the column names based on the header
 columns = [
@@ -75,9 +81,9 @@ tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_fr
 
 numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
 hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
-#hidden1 = keras.layers.Dropout(0.1)(hidden1)
+hidden1 = keras.layers.Dropout(0.1)(hidden1)
 hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
-#hidden2 = keras.layers.Dropout(0.1)(hidden2)
+hidden2 = keras.layers.Dropout(0.1)(hidden2)
 #concat = keras.layers.Concatenate()([numerical_input,hidden3])
 output = keras.layers.Dense(1)(hidden2)
 model = keras.Model(inputs=numerical_input, outputs=output)
@@ -88,11 +94,11 @@ model.compile(
     loss='mean_squared_error',
     metrics=['mae']
 )
-
+#learning_rate=0.006807936096668156
 
 hist1 = model.fit(
     X_input, y_input,
-    epochs=2000,
+    epochs=15000,
     batch_size=4,
     validation_split=0.15,
     callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
