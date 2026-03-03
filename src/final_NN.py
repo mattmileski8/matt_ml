@@ -69,88 +69,57 @@ X_scaled = scaler_X.fit_transform(X)
 scaler_y = StandardScaler()
 y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
-X_input = np.array(X_scaled)
-y_input = np.array(y_scaled)
+joblib.dump(scaler_X, "./models/final_NN_scaler_X.pkl")
+joblib.dump(scaler_y, "./models/final_NN_scaler_y.pkl")
+
+# X_input = np.array(X_scaled)
+# y_input = np.array(y_scaled)
 
 
-early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
+# early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
 
-log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-# tensorboard --logdir logs/fit
+# log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+# tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+# # tensorboard --logdir logs/fit
 
-numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
-hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
-hidden1 = keras.layers.Dropout(0.1)(hidden1)
-hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
-hidden2 = keras.layers.Dropout(0.1)(hidden2)
-concat = keras.layers.Concatenate()([numerical_input,hidden2])
-output = keras.layers.Dense(1)(concat)
-model = keras.Model(inputs=numerical_input, outputs=output)
-
-
-model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
-    loss='mean_squared_error',
-    metrics=['mae']
-)
-#learning_rate=0.006807936096668156
-
-hist1 = model.fit(
-    X_input, y_input,
-    epochs=5600,
-    batch_size=4,
-    validation_split=0.15,
-    callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
-    verbose=1
-    #shuffle=False
-)
-
-model.save("models/final_NN_model_concat_layer.keras")
-
-print("Best Stage 1 val_loss:", min(hist1.history['val_loss']))
+# numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
+# hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
+# hidden1 = keras.layers.Dropout(0.1)(hidden1)
+# hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
+# hidden2 = keras.layers.Dropout(0.1)(hidden2)
+# concat = keras.layers.Concatenate()([numerical_input,hidden2])
+# output = keras.layers.Dense(1)(concat)
+# model = keras.Model(inputs=numerical_input, outputs=output)
 
 
-# # ---- Stage 2: Fine-tune using all data (no validation) ----
+# model.compile(
+#     optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
+#     loss='mean_squared_error',
+#     metrics=['mae']
+# )
+# #learning_rate=0.006807936096668156
 
-# model.optimizer.learning_rate = 1e-4  # Lower LR for fine-tuning
-
-# hist2 = model.fit(
+# hist1 = model.fit(
 #     X_input, y_input,
-#     epochs=200,
-#     batch_size=8,
+#     epochs=5600,
+#     batch_size=4,
+#     validation_split=0.15,
+#     callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
 #     verbose=1
+#     #shuffle=False
 # )
 
-# print("Stage 2 final loss:", hist2.history['loss'][-1])
+# model.save("models/final_NN_model_concat_layer.keras")
+
+# print("Best Stage 1 val_loss:", min(hist1.history['val_loss']))
 
 
-# # ---- Save model and scalers ----
+# -------------------------- K-fold validation ------------------------------------------------------
 
-# os.makedirs("./models", exist_ok=True)
-# os.makedirs("./logs", exist_ok=True)
-
-# model.save('./models/final_NN.keras')
-# joblib.dump(scaler_X, './models/final_scaler_X.pkl')
-# joblib.dump(scaler_y, './models/final_scaler_y.pkl')
-
-# # ---- Save combined training history ----
-
-# stage1_len = len(hist1.history['loss'])
-# stage2_len = len(hist2.history['loss'])
-
-# history_df = pd.DataFrame({
-#     "stage1_loss": hist1.history['loss'] + [None]*stage2_len,
-#     "stage1_val_loss": hist1.history['val_loss'] + [None]*stage2_len,
-#     "stage2_loss": [None]*stage1_len + hist2.history['loss']
-# })
-
-# history_df.to_csv("./logs/final_NN_training_history.csv", index=False)
+model = keras.models.load_model("./models/final_NN_model.keras")
 
 
 
-
-# print(results_df)
 
 #------------------------------------------------------------------------------------------
 # model = keras.models.load_model('./models/final_NN.keras')
