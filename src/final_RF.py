@@ -14,6 +14,8 @@ from scipy.stats import linregress
 from sklearn.model_selection import KFold, cross_val_score
 from sklearn.metrics import make_scorer
 
+seed = 49
+oob_rmse_array = []
 
 # Define the column names based on the header
 columns = [
@@ -34,49 +36,58 @@ df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
 df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
 
+for i in range(50):
+    seed = i
 
-#----------Train initial model
-data_train, data_test = train_test_split(df, test_size=0.1, random_state=42)
+    #----------Train initial model
+    data_train, data_test = train_test_split(df, test_size=0.15, random_state=seed)
 
-X_train = data_train.drop(columns=['Breakdown Voltage (MV/m)'])
-X_test = data_test.drop(columns=['Breakdown Voltage (MV/m)'])
+    X_train = data_train.drop(columns=['Breakdown Voltage'])
+    X_test = data_test.drop(columns=['Breakdown Voltage'])
 
-y_train = data_train[['Breakdown Voltage (MV/m)']]
-y_test = data_test[['Breakdown Voltage (MV/m)']]
+    y_train = data_train[['Breakdown Voltage']]
+    y_test = data_test[['Breakdown Voltage']]
 
 
-# Convert to np arrays
-X_train_input = np.array(X_train)
-X_test_input = np.array(X_test)
-y_train_input = np.array(y_train)
-y_test_input = np.array(y_test)
+    # Convert to np arrays
+    X_train_input = np.array(X_train)
+    X_test_input = np.array(X_test)
+    y_train_input = np.array(y_train)
+    y_test_input = np.array(y_test)
 
-# Flatten input for BaggingRegressor
-y_train_input = y_train_input.ravel()
-y_test_input = y_test_input.ravel()
+    # Flatten input for BaggingRegressor
+    y_train_input = y_train_input.ravel()
+    y_test_input = y_test_input.ravel()
 
-n_estimators = 9691
-max_depth = 33
-min_split = 2
-min_leaf = 1
+    n_estimators = 9691
+    max_depth = 33
+    min_split = 2
+    min_leaf = 1
 
-rf = RandomForestRegressor(
-    n_estimators=n_estimators,
-    max_depth=max_depth,
-    min_samples_split=min_split,
-    min_samples_leaf=min_leaf,
-    random_state=42,
-    n_jobs=-1,
-    oob_score=True, 
-    bootstrap=True 
-)
+    rf = RandomForestRegressor(
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        min_samples_split=min_split,
+        min_samples_leaf=min_leaf,
+        random_state=seed,
+        n_jobs=-1,
+        oob_score=True, 
+        bootstrap=True 
+    )
 
-rf.fit(X_train_input, y_train_input)
+    rf.fit(X_train_input, y_train_input)
 
-oob_score = rf.oob_score_
+    oob_score = rf.oob_score_
 
-# Compute OOB RMSE (standardized)
-oob_rmse_std = np.sqrt(mean_squared_error(y_train_input, rf.oob_prediction_))
+    # Compute OOB RMSE (standardized)
+    oob_rmse = np.sqrt(mean_squared_error(y_train_input, rf.oob_prediction_))
+    #print(oob_rmse)
+    print(i)
+
+    oob_rmse_array.append(oob_rmse)
+
+print(np.mean(oob_rmse_array))
+
 
 # Convert to original units
 #oob_rmse = oob_rmse_std * scaler_label.scale_[0]
@@ -194,65 +205,65 @@ oob_rmse_std = np.sqrt(mean_squared_error(y_train_input, rf.oob_prediction_))
 # ----------------------------
 # Load Model & Scaler
 # ----------------------------
-rf_model = joblib.load("./models/final_rf_model.pkl")
-X_scaler = joblib.load("./models/rf_X_scaler.pkl")
+# rf_model = joblib.load("./models/final_rf_model.pkl")
+# X_scaler = joblib.load("./models/rf_X_scaler.pkl")
 
-# Prepare full dataset again
-X = df.drop(columns=['Breakdown Voltage (MV/m)'])
-y = df['Breakdown Voltage (MV/m)']
+# # Prepare full dataset again
+# X = df.drop(columns=['Breakdown Voltage (MV/m)'])
+# y = df['Breakdown Voltage (MV/m)']
 
-# Scale X
-X_scaled = X_scaler.transform(X)
+# # Scale X
+# X_scaled = X_scaler.transform(X)
 
-# Predict
-preds = rf_model.predict(X_scaled)
-y_actual = y.values
+# # Predict
+# preds = rf_model.predict(X_scaled)
+# y_actual = y.values
 
-# ----------------------------
-# Regression Fit Line & R²
-# ----------------------------
-#slope, intercept, r_value, _, _ = linregress(y_actual, preds)
-#y_fit = slope * y_actual + intercept
-r2 = r2_score(y_actual, preds)
+# # ----------------------------
+# # Regression Fit Line & R²
+# # ----------------------------
+# #slope, intercept, r_value, _, _ = linregress(y_actual, preds)
+# #y_fit = slope * y_actual + intercept
+# r2 = r2_score(y_actual, preds)
 
-# ----------------------------
-# Plot
-# ----------------------------
-plt.figure(figsize=(3.5, 3.5))
-plt.scatter(y_actual, preds, alpha=0.7)#, label="Predictions")
-plt.plot(y_actual, y_actual, linestyle='-', color='red')#,
-         #label=f"$R^2 = {r2:.3f}$")
-#plt.plot([], [], ' ', label=f"$R^2 = {r2:.3f}$")           # dummy plot for blank label
+# # ----------------------------
+# # Plot
+# # ----------------------------
+# plt.figure(figsize=(3.5, 3.5))
+# plt.scatter(y_actual, preds, alpha=0.7)#, label="Predictions")
+# plt.plot(y_actual, y_actual, linestyle='-', color='red')#,
+#          #label=f"$R^2 = {r2:.3f}$")
+# #plt.plot([], [], ' ', label=f"$R^2 = {r2:.3f}$")           # dummy plot for blank label
 
-plt.xlabel("Actual Breakdown Field (MV/m)", fontsize=8.5, fontweight='bold')
-plt.ylabel("Predicted Breakdown Field (MV/m)", fontsize=8.5, fontweight='bold')
-plt.xticks(fontsize=8.5)
-plt.yticks(fontsize=8.5)
-#plt.title("RF: Actual vs Predicted Electric Field at Breakdown")
-#plt.legend(fontsize=8.5, labelspacing=0.2)
-plt.grid(True)
+# plt.xlabel("Actual Breakdown Field (MV/m)", fontsize=8.5, fontweight='bold')
+# plt.ylabel("Predicted Breakdown Field (MV/m)", fontsize=8.5, fontweight='bold')
+# plt.xticks(fontsize=8.5)
+# plt.yticks(fontsize=8.5)
+# #plt.title("RF: Actual vs Predicted Electric Field at Breakdown")
+# #plt.legend(fontsize=8.5, labelspacing=0.2)
+# plt.grid(True)
 
-plt.text(
-    0.05, 0.95,                   # (x, y) position in axes coordinates
-    f"$R^2 = {r2:.3f}$",
-    transform=plt.gca().transAxes,
-    fontsize=8.5,
-    fontweight='bold',
-    verticalalignment='top',
-)
+# plt.text(
+#     0.05, 0.95,                   # (x, y) position in axes coordinates
+#     f"$R^2 = {r2:.3f}$",
+#     transform=plt.gca().transAxes,
+#     fontsize=8.5,
+#     fontweight='bold',
+#     verticalalignment='top',
+# )
 
 
-# Save
-os.makedirs("./images", exist_ok=True)
-plt.savefig("./images/final_RF_actual_vs_predicted_fitline.png", dpi=300, bbox_inches="tight")
-plt.close()
+# # Save
+# os.makedirs("./images", exist_ok=True)
+# plt.savefig("./images/final_RF_actual_vs_predicted_fitline.png", dpi=300, bbox_inches="tight")
+# plt.close()
 
-residuals = y_actual - preds
-z = np.abs((residuals - np.mean(residuals)) / np.std(residuals))
+# residuals = y_actual - preds
+# z = np.abs((residuals - np.mean(residuals)) / np.std(residuals))
 
-outliers = z > 3
-for i in range(len(outliers)):
-    if outliers[i] == True: 
-        print(names[i])
-        print(y_actual[i])
-        print(preds[i])
+# outliers = z > 3
+# for i in range(len(outliers)):
+#     if outliers[i] == True: 
+#         print(names[i])
+#         print(y_actual[i])
+#         print(preds[i])
