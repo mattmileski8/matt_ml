@@ -17,6 +17,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import KFold
 
 class LrChangePrinter(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
@@ -63,51 +64,53 @@ print(df.dtypes)
 X = df.drop(columns=["Breakdown Voltage"])  # all columns except target
 y = df["Breakdown Voltage"]                 # target column
 
-# scaler_X = StandardScaler()
-# X_scaled = scaler_X.fit_transform(X)
 
-# scaler_y = StandardScaler()
-# y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
+# cutoff here for K-fold --------------
+scaler_X = StandardScaler()
+X_scaled = scaler_X.fit_transform(X)
 
-# #joblib.dump(scaler_X, "./models/final_NN_scaler_X.pkl")
-# #joblib.dump(scaler_y, "./models/final_NN_scaler_y.pkl")
+scaler_y = StandardScaler()
+y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
-# X_input = np.array(X_scaled)
-# y_input = np.array(y_scaled)
+joblib.dump(scaler_X, "./models/final_NN_scaler_X.pkl")
+joblib.dump(scaler_y, "./models/final_NN_scaler_y.pkl")
 
-
-# early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
-
-# log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-# tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-# # tensorboard --logdir logs/fit
-
-# numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
-# hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
-# hidden1 = keras.layers.Dropout(0.1)(hidden1)
-# hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
-# hidden2 = keras.layers.Dropout(0.1)(hidden2)
-# concat = keras.layers.Concatenate()([numerical_input,hidden2])
-# output = keras.layers.Dense(1)(concat)
-# model = keras.Model(inputs=numerical_input, outputs=output)
+X_input = np.array(X_scaled)
+y_input = np.array(y_scaled)
 
 
-# model.compile(
-#     optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
-#     loss='mean_squared_error',
-#     metrics=['mae']
-# )
-# #learning_rate=0.006807936096668156
+early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
 
-# hist1 = model.fit(
-#     X_input, y_input,
-#     epochs=5600,
-#     batch_size=4,
-#     validation_split=0.15,
-#     callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
-#     verbose=1
-#     #shuffle=False
-# )
+log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+# tensorboard --logdir logs/fit
+
+numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
+hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
+hidden1 = keras.layers.Dropout(0.1)(hidden1)
+hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
+hidden2 = keras.layers.Dropout(0.1)(hidden2)
+#concat = keras.layers.Concatenate()([numerical_input,hidden2])
+output = keras.layers.Dense(1)(hidden2)
+model = keras.Model(inputs=numerical_input, outputs=output)
+
+
+model.compile(
+    optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
+    loss='mean_squared_error',
+    metrics=['mae']
+)
+#learning_rate=0.006807936096668156
+
+hist1 = model.fit(
+    X_input, y_input,
+    epochs=5600,
+    batch_size=4,
+    validation_split=0.15,
+    callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
+    verbose=1
+    #shuffle=False
+)
 
 # model.save("models/final_NN_model_concat_layer.keras")
 
@@ -115,10 +118,88 @@ y = df["Breakdown Voltage"]                 # target column
 
 
 # -------------------------- K-fold validation ------------------------------------------------------
+# # Define model builder
+# def build_model(input_dim):
+#     numerical_input = keras.layers.Input(shape=(input_dim,))
+#     hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
+#     hidden1 = keras.layers.Dropout(0.1)(hidden1)
+#     hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
+#     hidden2 = keras.layers.Dropout(0.1)(hidden2)
+#     #concat = keras.layers.Concatenate()([numerical_input, hidden2])
+#     output = keras.layers.Dense(1)(hidden2)
 
-model = keras.models.load_model("./models/final_NN_model.keras")
+#     model = keras.Model(inputs=numerical_input, outputs=output)
+
+#     model.compile(
+#         optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156),
+#         loss='mean_squared_error'
+#     )
+
+#     return model
+
+# kf = KFold(n_splits=5, shuffle=True, random_state=SEED)
+
+# rmse_scores = []
+# best_epochs = []
 
 
+
+# for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
+
+#     print(f"\n===== Fold {fold+1} =====")
+
+#     # Split raw data
+#     X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
+#     y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+#     # Fit scalers ONLY on training data (prevents leakage)
+#     scaler_X = StandardScaler()
+#     scaler_y = StandardScaler()
+
+#     X_train_scaled = scaler_X.fit_transform(X_train)
+#     X_val_scaled = scaler_X.transform(X_val)
+
+#     y_train_scaled = scaler_y.fit_transform(y_train.values.reshape(-1,1))
+#     y_val_scaled = scaler_y.transform(y_val.values.reshape(-1,1))
+
+#     # Build fresh model
+#     model = build_model(X_train_scaled.shape[1])
+
+#     early_stopping = keras.callbacks.EarlyStopping(
+#         monitor='val_loss',
+#         patience=50,
+#         restore_best_weights=True
+#     )
+
+#     history = model.fit(
+#         X_train_scaled,
+#         y_train_scaled,
+#         validation_data=(X_val_scaled, y_val_scaled),
+#         epochs=5600,
+#         batch_size=4,
+#         callbacks=[early_stopping],
+#         verbose=0
+#     )
+
+#     # Record best epoch
+#     best_epoch = np.argmin(history.history['val_loss']) + 1
+#     best_epochs.append(best_epoch)
+
+#     # Predict
+#     y_pred_scaled = model.predict(X_val_scaled)
+#     y_pred = scaler_y.inverse_transform(y_pred_scaled)
+
+#     # Compute RMSE in original voltage units
+#     rmse = np.sqrt(mean_squared_error(y_val, y_pred))
+#     rmse_scores.append(rmse)
+
+#     print(f"Fold {fold+1} RMSE: {rmse:.4f}")
+#     print(f"Best epoch: {best_epoch}")
+
+# print("\n===== Cross-Validation Results =====")
+# print("Average RMSE:", np.mean(rmse_scores))
+# print("Std RMSE:", np.std(rmse_scores))
+# print("Average Best Epoch:", int(np.mean(best_epochs)))
 
 
 #------------------------------------------------------------------------------------------
