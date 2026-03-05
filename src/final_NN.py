@@ -18,6 +18,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold
+from sklearn.metrics import r2_score
 
 class LrChangePrinter(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
@@ -66,53 +67,67 @@ y = df["Breakdown Voltage"]                 # target column
 
 
 # cutoff here for K-fold --------------
-scaler_X = StandardScaler()
-X_scaled = scaler_X.fit_transform(X)
+# scaler_X = StandardScaler()
+# X_scaled = scaler_X.fit_transform(X)
 
-scaler_y = StandardScaler()
-y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
+# scaler_y = StandardScaler()
+# y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
-joblib.dump(scaler_X, "./models/final_NN_scaler_X.pkl")
-joblib.dump(scaler_y, "./models/final_NN_scaler_y.pkl")
+# joblib.dump(scaler_X, "./models/final_NN_scaler_X.pkl")
+# joblib.dump(scaler_y, "./models/final_NN_scaler_y.pkl")
 
-X_input = np.array(X_scaled)
-y_input = np.array(y_scaled)
-
-
-early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
-
-log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-# tensorboard --logdir logs/fit
-
-numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
-hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
-hidden1 = keras.layers.Dropout(0.1)(hidden1)
-hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
-hidden2 = keras.layers.Dropout(0.1)(hidden2)
-#concat = keras.layers.Concatenate()([numerical_input,hidden2])
-output = keras.layers.Dense(1)(hidden2)
-model = keras.Model(inputs=numerical_input, outputs=output)
+# X_input = np.array(X_scaled)
+# y_input = np.array(y_scaled)
 
 
-model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
-    loss='mean_squared_error',
-    metrics=['mae']
-)
-#learning_rate=0.006807936096668156
+# early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
 
-hist1 = model.fit(
-    X_input, y_input,
-    epochs=5600,
-    batch_size=4,
-    validation_split=0.15,
-    callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
-    verbose=1
-    #shuffle=False
-)
+# log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+# tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+# # tensorboard --logdir logs/fit
 
-# model.save("models/final_NN_model_concat_layer.keras")
+# numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
+# hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
+# hidden1 = keras.layers.Dropout(0.1)(hidden1)
+# hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
+# hidden2 = keras.layers.Dropout(0.1)(hidden2)
+# #concat = keras.layers.Concatenate()([numerical_input,hidden2])
+# output = keras.layers.Dense(1)(hidden2)
+# model = keras.Model(inputs=numerical_input, outputs=output)
+
+
+# model.compile(
+#     optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
+#     loss='mean_squared_error',
+#     metrics=['mae']
+# )
+# #learning_rate=0.006807936096668156
+
+# hist1 = model.fit(
+#     X_input, y_input,
+#     epochs=5400,
+#     batch_size=4,
+#     validation_split=0.15,
+#     #callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
+#     verbose=1
+#     #shuffle=False
+# )
+
+# # ---- Save history to .csv ---------------
+# history_dict = hist1.history
+
+# # Convert to DataFrame
+# history_df = pd.DataFrame(history_dict)
+
+# # Add epoch column
+# history_df['epoch'] = np.arange(1, len(history_df) + 1)
+
+# # Save to CSV
+# history_df.to_csv("./data/5400_training_history.csv", index=False)
+# #-------------------------------------
+
+
+# model.save("models/final_NN_model.keras")
 
 # print("Best Stage 1 val_loss:", min(hist1.history['val_loss']))
 
@@ -137,7 +152,7 @@ hist1 = model.fit(
 
 #     return model
 
-# kf = KFold(n_splits=5, shuffle=True, random_state=SEED)
+# kf = KFold(n_splits=7, shuffle=True, random_state=SEED)
 
 # rmse_scores = []
 # best_epochs = []
@@ -167,7 +182,7 @@ hist1 = model.fit(
 
 #     early_stopping = keras.callbacks.EarlyStopping(
 #         monitor='val_loss',
-#         patience=50,
+#         patience=1500,
 #         restore_best_weights=True
 #     )
 
@@ -175,9 +190,9 @@ hist1 = model.fit(
 #         X_train_scaled,
 #         y_train_scaled,
 #         validation_data=(X_val_scaled, y_val_scaled),
-#         epochs=5600,
+#         epochs=5400,
 #         batch_size=4,
-#         callbacks=[early_stopping],
+#         #callbacks=[early_stopping],
 #         verbose=0
 #     )
 
@@ -201,6 +216,81 @@ hist1 = model.fit(
 # print("Std RMSE:", np.std(rmse_scores))
 # print("Average Best Epoch:", int(np.mean(best_epochs)))
 
+# -----------------Test Model ---------------------------------------------------------
+
+# Load trained model
+model = keras.models.load_model("models/final_NN_model.keras")
+
+# Load saved scalers
+scaler_X = joblib.load("models/final_NN_scaler_X.pkl")
+scaler_y = joblib.load("models/final_NN_scaler_y.pkl")
+
+
+# Load test data
+df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
+df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
+
+# Load prediction dataset
+df_pred = pd.read_csv("./data/molecular_tm_data_sorted.txt", sep="\t")
+df_pred_names = pd.read_csv("./data/molecular_tm_names_sorted.txt", sep="\t")
+
+
+# Separate features and target
+X_test = df_test.drop(columns=["Breakdown Voltage"])
+y_test = df_test["Breakdown Voltage"]
+
+# Import scalers used in training
+X_test_scaled = scaler_X.transform(X_test)
+
+# Predict test set
+y_pred_scaled = model.predict(X_test_scaled)
+
+# Convert predictions back into relative DS units
+y_pred = scaler_y.inverse_transform(y_pred_scaled)
+ypred = y_pred.flatten()
+
+# Calculate Test RMSE
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+print(f"Test RMSE: {rmse:.4f}")
+
+# Separate training features/target again
+X_train = df.drop(columns=["Breakdown Voltage"])
+y_train = df["Breakdown Voltage"]
+
+# Scale using saved scalers
+X_train_scaled = scaler_X.transform(X_train)
+
+# Predict (scaled)
+y_train_pred_scaled = model.predict(X_train_scaled)
+
+# Convert back to real units
+y_train_pred = scaler_y.inverse_transform(y_train_pred_scaled).flatten()
+
+# R² scores
+r2_train = r2_score(y_train, y_train_pred)
+r2_test = r2_score(y_test, y_pred)
+
+# Parity plot
+plt.figure(figsize=(6,6))
+
+# Plot training
+plt.scatter(y_train, y_train_pred, alpha=0.6, label=f"Train (R² = {r2_train:.3f})")
+
+# Plot test
+plt.scatter(y_test, y_pred, alpha=0.9, label=f"Test (R² = {r2_test:.3f})")
+
+plt.plot(
+    [min(y_train), max(y_test)],
+    [min(y_train), max(y_test)],
+)  # 45-degree line
+
+plt.xlabel("Actual Breakdown Voltage")
+plt.ylabel("Predicted Breakdown Voltage")
+plt.title("Parity Plot: Training vs Test")
+plt.legend()
+#plt.gca().set_aspect('equal', adjustable='box')
+plt.tight_layout()
+plt.savefig("./images/test_parity.png")
 
 #------------------------------------------------------------------------------------------
 # model = keras.models.load_model('./models/final_NN.keras')

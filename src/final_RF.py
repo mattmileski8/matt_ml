@@ -55,36 +55,12 @@ y_test_input = np.array(y_test)
 y_train_input = y_train_input.ravel()
 y_test_input = y_test_input.ravel()
 
-n_estimators = 100
-max_depth = None
+n_estimators = 9691
+max_depth = 33
 min_split = 2
 min_leaf = 1
 
-# rf = RandomForestRegressor(
-#     n_estimators=n_estimators,
-#     max_depth=max_depth,
-#     min_samples_split=min_split,
-#     min_samples_leaf=min_leaf,
-#     random_state=42,
-#     n_jobs=-1,
-#     oob_score=True, 
-#     bootstrap=True 
-# )
-
-# rf.fit(X_train_input, y_train_input)
-
-# oob_score = rf.oob_score_
-
-# # Compute OOB RMSE (standardized)
-# oob_rmse_std = np.sqrt(mean_squared_error(y_train_input, rf.oob_prediction_))
-
-# # Convert to original MV/m
-# #oob_rmse = oob_rmse_std * scaler_label.scale_[0]
-
-
-#---------CV Score----------------------
-
-rf_cv = RandomForestRegressor(
+rf = RandomForestRegressor(
     n_estimators=n_estimators,
     max_depth=max_depth,
     min_samples_split=min_split,
@@ -95,25 +71,49 @@ rf_cv = RandomForestRegressor(
     bootstrap=True 
 )
 
-neg_mse_scorer = make_scorer(mean_squared_error, greater_is_better=False)
+rf.fit(X_train_input, y_train_input)
 
-# 10-fold cross-validation
-kf = KFold(n_splits=10, shuffle=True, random_state=42)
-cv_scores = cross_val_score(
-    rf_cv,
-    X_train_input,
-    y_train_input,
-    scoring=neg_mse_scorer,
-    cv=kf,
-    n_jobs=-1
-)
+oob_score = rf.oob_score_
 
-# Convert to RMSE
-cv_rmse = np.sqrt(-cv_scores)
+# Compute OOB RMSE (standardized)
+oob_rmse_std = np.sqrt(mean_squared_error(y_train_input, rf.oob_prediction_))
 
-print("Cross-validation RMSE per fold:", cv_rmse)
-print("Mean CV RMSE:", np.mean(cv_rmse))
-print("Std CV RMSE:", np.std(cv_rmse))
+# Convert to original units
+#oob_rmse = oob_rmse_std * scaler_label.scale_[0]
+
+
+#---------CV Score----------------------
+
+# rf_cv = RandomForestRegressor(
+#     n_estimators=n_estimators,
+#     max_depth=max_depth,
+#     min_samples_split=min_split,
+#     min_samples_leaf=min_leaf,
+#     random_state=42,
+#     n_jobs=-1,
+#     oob_score=True, 
+#     bootstrap=True 
+# )
+
+# neg_mse_scorer = make_scorer(mean_squared_error, greater_is_better=False)
+
+# # 10-fold cross-validation
+# kf = KFold(n_splits=10, shuffle=True, random_state=42)
+# cv_scores = cross_val_score(
+#     rf_cv,
+#     X_train_input,
+#     y_train_input,
+#     scoring=neg_mse_scorer,
+#     cv=kf,
+#     n_jobs=-1
+# )
+
+# # Convert to RMSE
+# cv_rmse = np.sqrt(-cv_scores)
+
+# print("Cross-validation RMSE per fold:", cv_rmse)
+# print("Mean CV RMSE:", np.mean(cv_rmse))
+# print("Std CV RMSE:", np.std(cv_rmse))
 
 
 # # Predictions
