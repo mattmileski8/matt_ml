@@ -31,105 +31,129 @@ class LrChangePrinter(keras.callbacks.Callback):
             self.prev_lr = lr
 
 
-SEED = 42
+#SEED = 3
+RMSE_array = []
+seed_array = []
+best_epoch_array = []
 
-random.seed(SEED)
-np.random.seed(SEED)
-tf.random.set_seed(SEED)
+for i in range(5):
+    SEED = i
 
-# Define the column names based on the header
-columns = [
-    "Molecule",
-    "Vibrational ZPE",
-    "Polarizability",
-    "Dipole Moment",
-    "Adiabatic IE",
-    "Cohesive Energy",
-    "Breakdown Voltage", 
-    "Molecular Mass",
-    "Number e-",
-    "Molecular Volume"
-]
+    random.seed(SEED)
+    np.random.seed(SEED)
+    tf.random.set_seed(SEED)
 
-# Load the dataframe saved from preprocessing
-df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
-df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
+    # Define the column names based on the header
+    columns = [
+        "Molecule",
+        "Vibrational ZPE",
+        "Polarizability",
+        "Dipole Moment",
+        "Adiabatic IE",
+        "Cohesive Energy",
+        "Breakdown Voltage", 
+        "Molecular Mass",
+        "Number e-",
+        "Molecular Volume"
+    ]
 
-# verify
-print(df.head())
-print(df.dtypes)
+    # Load the dataframe saved from preprocessing
+    df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+    df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
+    # verify
+    print(df.head())
+    print(df.dtypes)
 
+    # --- NEW: Split 10% for testing ---
+    n_samples = len(df)
+    train_val_indices, test_indices = train_test_split(
+        np.arange(n_samples), test_size=0.1, random_state=SEED
+    )
 
-# Separate features (X) and target (y)
-X = df.drop(columns=["Breakdown Voltage"])  # all columns except target
-y = df["Breakdown Voltage"]                 # target column
+    # Train+val data (90%)
+    X_train_val = df.iloc[train_val_indices].drop(columns=["Breakdown Voltage"])
+    y_train_val = df.iloc[train_val_indices]["Breakdown Voltage"]
 
+    # Test data (10%)
+    X_test = df.iloc[test_indices].drop(columns=["Breakdown Voltage"])
+    y_test = df.iloc[test_indices]["Breakdown Voltage"]
 
-# cutoff here for K-fold --------------
-# scaler_X = StandardScaler()
-# X_scaled = scaler_X.fit_transform(X)
+    # --- Scale only on train+val data ---
+    scaler_X = StandardScaler()
+    X_train_val_scaled = scaler_X.fit_transform(X_train_val)
 
-# scaler_y = StandardScaler()
-# y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
+    scaler_y = StandardScaler()
+    y_train_val_scaled = scaler_y.fit_transform(y_train_val.values.reshape(-1, 1))
 
-# joblib.dump(scaler_X, "./models/final_NN_scaler_X.pkl")
-# joblib.dump(scaler_y, "./models/final_NN_scaler_y.pkl")
+    X_input = np.array(X_train_val_scaled)
+    y_input = np.array(y_train_val_scaled)
 
-# X_input = np.array(X_scaled)
-# y_input = np.array(y_scaled)
+    early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=4000, restore_best_weights=True)
 
+    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    # tensorboard --logdir logs/fit
 
-# early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)
-
-# log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-# tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-# # tensorboard --logdir logs/fit
-
-# numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
-# hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
-# hidden1 = keras.layers.Dropout(0.1)(hidden1)
-# hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
-# hidden2 = keras.layers.Dropout(0.1)(hidden2)
-# #concat = keras.layers.Concatenate()([numerical_input,hidden2])
-# output = keras.layers.Dense(1)(hidden2)
-# model = keras.Model(inputs=numerical_input, outputs=output)
-
-
-# model.compile(
-#     optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
-#     loss='mean_squared_error',
-#     metrics=['mae']
-# )
-# #learning_rate=0.006807936096668156
-
-# hist1 = model.fit(
-#     X_input, y_input,
-#     epochs=5400,
-#     batch_size=4,
-#     validation_split=0.15,
-#     #callbacks=[tensorboard_callback], #early_stopping, lr_schedule, LrChangePrinter()],
-#     verbose=1
-#     #shuffle=False
-# )
-
-# # ---- Save history to .csv ---------------
-# history_dict = hist1.history
-
-# # Convert to DataFrame
-# history_df = pd.DataFrame(history_dict)
-
-# # Add epoch column
-# history_df['epoch'] = np.arange(1, len(history_df) + 1)
-
-# # Save to CSV
-# history_df.to_csv("./data/5400_training_history.csv", index=False)
-# #-------------------------------------
+    numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
+    hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
+    hidden1 = keras.layers.Dropout(0.1)(hidden1)
+    hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
+    hidden2 = keras.layers.Dropout(0.1)(hidden2)
+    #concat = keras.layers.Concatenate()([numerical_input,hidden2])
+    output = keras.layers.Dense(1)(hidden2)
+    model = keras.Model(inputs=numerical_input, outputs=output)
 
 
-# model.save("models/final_NN_model.keras")
+    model.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
+        loss='mean_squared_error',
+        metrics=['mae']
+    )
+    #learning_rate=0.006807936096668156
 
-# print("Best Stage 1 val_loss:", min(hist1.history['val_loss']))
+    hist1 = model.fit(
+        X_input, y_input,
+        epochs=6000,
+        batch_size=4,
+        validation_split=0.15,  # Now ~13.5% of total data for validation
+        callbacks=[early_stopping],#tensorboard_callback],  etc.
+        verbose=1
+    )
+
+    # --- NEW: Evaluate on test set ---
+    X_test_scaled = scaler_X.transform(X_test)
+    y_pred_scaled = model.predict(X_test_scaled)
+    y_pred = scaler_y.inverse_transform(y_pred_scaled).flatten()
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    RMSE_array.append(rmse)
+    print(f"Loop {i+1} Test RMSE: {rmse:.4f}")
+
+    seed_array.append(SEED)
+    best_epoch_array.append(np.argmin(hist1.history['val_mae']) + 1)
+
+# --- NEW: After the loop, save RMSE_array ---
+rmse_df = pd.DataFrame({"Seed": seed_array, "Test_RMSE": RMSE_array})
+rmse_df.to_csv("./results/nn_test_rmse_per_loop.csv", index=False)
+print("Saved test RMSE per loop to ./results/nn_test_rmse_per_loop.csv")
+    
+    # ---- Save history to .csv ---------------
+    # history_dict = hist1.history
+
+    # # Convert to DataFrame
+    # history_df = pd.DataFrame(history_dict)
+
+    # # Add epoch column
+    # history_df['epoch'] = np.arange(1, len(history_df) + 1)
+
+    # # Save to CSV
+    # history_df.to_csv("./data/training_histories/5400_training_3_history.csv", index=False)
+    #-------------------------------------
+
+
+#model.save("models/final_NN_model.keras")
+
+print("Best Stage 1 val_mae:", min(hist1.history['val_mae']))
 
 
 # -------------------------- K-fold validation ------------------------------------------------------
@@ -218,79 +242,79 @@ y = df["Breakdown Voltage"]                 # target column
 
 # -----------------Test Model ---------------------------------------------------------
 
-# Load trained model
-model = keras.models.load_model("models/final_NN_model.keras")
+# # Load trained model
+# model = keras.models.load_model("models/final_NN_model.keras")
 
-# Load saved scalers
-scaler_X = joblib.load("models/final_NN_scaler_X.pkl")
-scaler_y = joblib.load("models/final_NN_scaler_y.pkl")
-
-
-# Load test data
-df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
-df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
-
-# Load prediction dataset
-df_pred = pd.read_csv("./data/molecular_tm_data_sorted.txt", sep="\t")
-df_pred_names = pd.read_csv("./data/molecular_tm_names_sorted.txt", sep="\t")
+# # Load saved scalers
+# scaler_X = joblib.load("models/final_NN_scaler_X.pkl")
+# scaler_y = joblib.load("models/final_NN_scaler_y.pkl")
 
 
-# Separate features and target
-X_test = df_test.drop(columns=["Breakdown Voltage"])
-y_test = df_test["Breakdown Voltage"]
+# # Load test data
+# df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
+# df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
 
-# Import scalers used in training
-X_test_scaled = scaler_X.transform(X_test)
+# # Load prediction dataset
+# df_pred = pd.read_csv("./data/molecular_tm_data_sorted.txt", sep="\t")
+# df_pred_names = pd.read_csv("./data/molecular_tm_names_sorted.txt", sep="\t")
 
-# Predict test set
-y_pred_scaled = model.predict(X_test_scaled)
 
-# Convert predictions back into relative DS units
-y_pred = scaler_y.inverse_transform(y_pred_scaled)
-ypred = y_pred.flatten()
+# # Separate features and target
+# X_test = df_test.drop(columns=["Breakdown Voltage"])
+# y_test = df_test["Breakdown Voltage"]
 
-# Calculate Test RMSE
-rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-print(f"Test RMSE: {rmse:.4f}")
+# # Import scalers used in training
+# X_test_scaled = scaler_X.transform(X_test)
 
-# Separate training features/target again
-X_train = df.drop(columns=["Breakdown Voltage"])
-y_train = df["Breakdown Voltage"]
+# # Predict test set
+# y_pred_scaled = model.predict(X_test_scaled)
 
-# Scale using saved scalers
-X_train_scaled = scaler_X.transform(X_train)
+# # Convert predictions back into relative DS units
+# y_pred = scaler_y.inverse_transform(y_pred_scaled)
+# ypred = y_pred.flatten()
 
-# Predict (scaled)
-y_train_pred_scaled = model.predict(X_train_scaled)
+# # Calculate Test RMSE
+# rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+# print(f"Test RMSE: {rmse:.4f}")
 
-# Convert back to real units
-y_train_pred = scaler_y.inverse_transform(y_train_pred_scaled).flatten()
+# # Separate training features/target again
+# X_train = df.drop(columns=["Breakdown Voltage"])
+# y_train = df["Breakdown Voltage"]
 
-# R² scores
-r2_train = r2_score(y_train, y_train_pred)
-r2_test = r2_score(y_test, y_pred)
+# # Scale using saved scalers
+# X_train_scaled = scaler_X.transform(X_train)
 
-# Parity plot
-plt.figure(figsize=(6,6))
+# # Predict (scaled)
+# y_train_pred_scaled = model.predict(X_train_scaled)
 
-# Plot training
-plt.scatter(y_train, y_train_pred, alpha=0.6, label=f"Train (R² = {r2_train:.3f})")
+# # Convert back to real units
+# y_train_pred = scaler_y.inverse_transform(y_train_pred_scaled).flatten()
 
-# Plot test
-plt.scatter(y_test, y_pred, alpha=0.9, label=f"Test (R² = {r2_test:.3f})")
+# # R² scores
+# r2_train = r2_score(y_train, y_train_pred)
+# r2_test = r2_score(y_test, y_pred)
 
-plt.plot(
-    [min(y_train), max(y_test)],
-    [min(y_train), max(y_test)],
-)  # 45-degree line
+# # Parity plot
+# plt.figure(figsize=(6,6))
 
-plt.xlabel("Actual Breakdown Voltage")
-plt.ylabel("Predicted Breakdown Voltage")
-plt.title("Parity Plot: Training vs Test")
-plt.legend()
-#plt.gca().set_aspect('equal', adjustable='box')
-plt.tight_layout()
-plt.savefig("./images/test_parity.png")
+# # Plot training
+# plt.scatter(y_train, y_train_pred, alpha=0.6, label=f"Train (R² = {r2_train:.3f})")
+
+# # Plot test
+# plt.scatter(y_test, y_pred, alpha=0.9, label=f"Test (R² = {r2_test:.3f})")
+
+# plt.plot(
+#     [min(y_train), max(y_test)],
+#     [min(y_train), max(y_test)],
+# )  # 45-degree line
+
+# plt.xlabel("Actual Breakdown Voltage")
+# plt.ylabel("Predicted Breakdown Voltage")
+# plt.title("Parity Plot: Training vs Test")
+# plt.legend()
+# #plt.gca().set_aspect('equal', adjustable='box')
+# plt.tight_layout()
+# plt.savefig("./images/test_parity.png")
 
 #------------------------------------------------------------------------------------------
 # model = keras.models.load_model('./models/final_NN.keras')

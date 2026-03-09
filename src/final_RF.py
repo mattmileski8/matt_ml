@@ -16,6 +16,7 @@ from sklearn.metrics import make_scorer
 
 seed = 49
 oob_rmse_array = []
+test_rmse_array = []
 
 # Define the column names based on the header
 columns = [
@@ -40,7 +41,7 @@ for i in range(50):
     seed = i
 
     #----------Train initial model
-    data_train, data_test = train_test_split(df, test_size=0.15, random_state=seed)
+    data_train, data_test = train_test_split(df, test_size=0.1, random_state=seed)
 
     X_train = data_train.drop(columns=['Breakdown Voltage'])
     X_test = data_test.drop(columns=['Breakdown Voltage'])
@@ -84,9 +85,15 @@ for i in range(50):
     #print(oob_rmse)
     print(i)
 
+    # Test RMSE
+    y_test_pred = rf.predict(X_test_input)
+    test_rmse = np.sqrt(mean_squared_error(y_test_input, y_test_pred))
+
+    test_rmse_array.append(test_rmse)
     oob_rmse_array.append(oob_rmse)
 
 print(np.mean(oob_rmse_array))
+print(np.mean(test_rmse_array))
 
 
 # Convert to original units
