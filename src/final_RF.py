@@ -14,9 +14,12 @@ from scipy.stats import linregress
 from sklearn.model_selection import KFold, cross_val_score
 from sklearn.metrics import make_scorer
 
-seed = 49
+seed_array = []
 oob_rmse_array = []
 test_rmse_array = []
+#external_rmse_array = []
+r2_train_array = []
+#r2_external_test_array = []
 
 # Define the column names based on the header
 columns = [
@@ -37,7 +40,7 @@ df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
 df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
 
-for i in range(50):
+for i in range(150):
     seed = i
 
     #----------Train initial model
@@ -89,8 +92,22 @@ for i in range(50):
     y_test_pred = rf.predict(X_test_input)
     test_rmse = np.sqrt(mean_squared_error(y_test_input, y_test_pred))
 
+    seed_array.append(seed)
     test_rmse_array.append(test_rmse)
     oob_rmse_array.append(oob_rmse)
+
+    # Compute R² for training set
+    X_train_r2 = np.array(df.drop(columns=['Breakdown Voltage']))
+    y_train_r2 = np.array(df[['Breakdown Voltage']])
+    y_r2_pred = rf.predict(X_train_r2)
+
+    r2_train = r2_score(y_train_r2, y_r2_pred)
+    r2_train_array.append(r2_train)
+
+rmse_df = pd.DataFrame({"Seed": seed_array, "Test_RMSE": test_rmse_array, "OOB_RMSE": oob_rmse_array, "R2_Train": r2_train_array})
+rmse_df.to_csv("./results/rf_test_rmse_per_loop.csv", index=False)
+print("Saved test RMSE per loop to ./results/rf_test_rmse_per_loop.csv")
+
 
 print(np.mean(oob_rmse_array))
 print(np.mean(test_rmse_array))

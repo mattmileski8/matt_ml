@@ -35,8 +35,11 @@ class LrChangePrinter(keras.callbacks.Callback):
 RMSE_array = []
 seed_array = []
 best_epoch_array = []
+external_rmse_array = []
+r2_train_array = []
+r2_external_test_array = []
 
-for i in range(5):
+for i in range(150):
     SEED = i
 
     random.seed(SEED)
@@ -89,7 +92,7 @@ for i in range(5):
     X_input = np.array(X_train_val_scaled)
     y_input = np.array(y_train_val_scaled)
 
-    early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=4000, restore_best_weights=True)
+    early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=3500, restore_best_weights=True)
 
     log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
@@ -114,14 +117,14 @@ for i in range(5):
 
     hist1 = model.fit(
         X_input, y_input,
-        epochs=6000,
+        epochs=10000,
         batch_size=4,
         validation_split=0.15,  # Now ~13.5% of total data for validation
         callbacks=[early_stopping],#tensorboard_callback],  etc.
         verbose=1
     )
 
-    # --- NEW: Evaluate on test set ---
+    # --- NEW: Evaluate on internal test set ---
     X_test_scaled = scaler_X.transform(X_test)
     y_pred_scaled = model.predict(X_test_scaled)
     y_pred = scaler_y.inverse_transform(y_pred_scaled).flatten()
@@ -132,8 +135,54 @@ for i in range(5):
     seed_array.append(SEED)
     best_epoch_array.append(np.argmin(hist1.history['val_mae']) + 1)
 
+
+    # ------External test set ---------
+    # Load test data
+    df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
+    #df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
+
+    # Separate features and target
+    X_test_external = df_test.drop(columns=["Breakdown Voltage"])
+    y_test_external = df_test["Breakdown Voltage"]
+
+    # Import scalers used in training
+    X_test_external_scaled = scaler_X.transform(X_test_external)
+
+    # Predict test set
+    y_pred_external_scaled = model.predict(X_test_external_scaled)
+
+    # Convert predictions back into relative DS units
+    y_pred_external = scaler_y.inverse_transform(y_pred_external_scaled)
+    ypred_external = y_pred_external.flatten()
+
+    # Calculate Test RMSE
+    external_rmse = np.sqrt(mean_squared_error(y_test_external, y_pred_external))
+    external_rmse_array.append(external_rmse)
+    #print(f"Test RMSE: {rmse:.4f}")
+
+    df_train_check = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+    X_train_check = df_train_check.drop(columns=["Breakdown Voltage"])
+    y_train_check = df_train_check["Breakdown Voltage"]
+
+    X_train_check_scaled = scaler_X.transform(X_train_check)
+    y_train_pred_scaled = model.predict(X_train_check_scaled)
+    y_train_pred = scaler_y.inverse_transform(y_train_pred_scaled).flatten()
+
+    # R² scores
+    r2_train = r2_score(y_train_check, y_train_pred)
+    r2_external_test = r2_score(y_test_external, y_pred_external)
+
+    r2_train_array.append(r2_train)
+    r2_external_test_array.append(r2_external_test)
+
+
 # --- NEW: After the loop, save RMSE_array ---
-rmse_df = pd.DataFrame({"Seed": seed_array, "Test_RMSE": RMSE_array})
+rmse_df = pd.DataFrame({"Seed": seed_array, 
+                        "Test_RMSE": RMSE_array,
+                        "External_Test_RMSE": external_rmse_array,
+                        "R2_Train": r2_train_array,
+                        "R2_External_Test": r2_external_test_array,
+                        "Best_Epoch": best_epoch_array})
 rmse_df.to_csv("./results/nn_test_rmse_per_loop.csv", index=False)
 print("Saved test RMSE per loop to ./results/nn_test_rmse_per_loop.csv")
     
@@ -153,7 +202,7 @@ print("Saved test RMSE per loop to ./results/nn_test_rmse_per_loop.csv")
 
 #model.save("models/final_NN_model.keras")
 
-print("Best Stage 1 val_mae:", min(hist1.history['val_mae']))
+#print("Best Stage 1 val_mae:", min(hist1.history['val_mae']))
 
 
 # -------------------------- K-fold validation ------------------------------------------------------
