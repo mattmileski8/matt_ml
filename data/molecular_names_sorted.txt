@@ -8,9 +8,7 @@ CC_Cl_Cl
 FC1_C_F_C_C1_F_F__F_F
 FC__C_F_F_Cl
 _C-___O__
-FC_I__F_F
 FC_F__F_F
-CI
 CH2Cl2
 N_CC_F__F_F
 FC_C_Cl__F_F__Cl_Cl
