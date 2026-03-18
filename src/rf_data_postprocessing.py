@@ -9,132 +9,30 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 
 
-# Define the column names based on the header
 columns = [
     "Molecule",
-    "Vibrational ZPE (cm^-1)",
-    "Polarizability (Å^3)",
-    "Dipole Moment (Debye)",
-    "Adiabatic IE (eV)",
-    "Cohesive Energy (kJ/mol)"
+    "Vibrational ZPE",
+    "Polarizability",
+    "Dipole Moment",
+    "Adiabatic IE",
+    "Cohesive Energy",
+    "Breakdown Voltage", 
+    "Molecular Mass",
+    "Number e-",
+    "Molecular Volume"
 ]
 
-columns_training = [
-    "Molecule",
-    "Vibrational ZPE (cm^-1)",
-    "Polarizability (Å^3)",
-    "Dipole Moment (Debye)",
-    "Adiabatic IE (eV)",
-    "Cohesive Energy (kJ/mol)",
-    "Breakdown Voltage (MV/m)"
-]
+MODEL_PATH = "./models/eight_descriptors/rf_avg_model.pkl"
+OUTPUT_DIR = "./results/shap_rf_8_descriptors_all"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Load the file
-with open('./data/molecular_data_tm.txt', "r") as file:
-    lines = file.readlines()
+df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
-data = []
-
-for line in lines:
-    # Remove leading/trailing whitespace
-    line = line.strip()
-    if not line or line.startswith("Molecule"):
-        continue  # Skip empty and header lines
-
-    # Match molecule name (non-numeric part at the start)
-    match = re.match(r'^(\S+)', line)
-    if match:
-        molecule = match.group(1)
-        # Extract all numbers (scientific notation or float)
-        values = re.findall(r'[-+]?\d*\.\d+e[+-]?\d+|[-+]?\d+\.\d+|[-+]?\d+', line[len(molecule):])
-        # Fill missing values with None (so all rows have 6 columns)
-        while len(values) < 5:
-            values.append(None)
-        data.append([molecule] + values)
-
-# Convert to DataFrame
-df = pd.DataFrame(data, columns=columns)
-df = df.replace("", pd.NA).dropna()
-
-#---------------------------------------------------------------------
-# Load the training data
-with open('./data/molecular_data.txt', "r") as file:
-    lines = file.readlines()
-
-data = []
-
-for line in lines:
-    # Remove leading/trailing whitespace
-    line = line.strip()
-    if not line or line.startswith("Molecule"):
-        continue  # Skip empty and header lines
-
-    # Match molecule name (non-numeric part at the start)
-    match = re.match(r'^(\S+)', line)
-    if match:
-        molecule = match.group(1)
-        # Extract all numbers (scientific notation or float)
-        values = re.findall(r'(?<![A-Za-z0-9])[-+]?\d*\.\d+(?:e[+-]?\d+)?|[-+]?\d+(?:\.\d+)?', line[len(molecule):])
-        # Fill missing values with None (so all rows have 6 columns)
-        while len(values) < 5:
-            values.append(None)
-        data.append([molecule] + values)
-
-# Convert to DataFrame
-df_training = pd.DataFrame(data, columns=columns_training)
-df_training = df_training.replace("", pd.NA).dropna()
-df_training = df_training.drop(columns=["Breakdown Voltage (MV/m)"])
-df_training["Molecule"] = df_training["Molecule"] + "*"
-df_all = pd.concat([df, df_training], ignore_index=True)
-
-df = df_all
-#-----------------------------------------------------------------------
+# Attach molecule names to the feature data (molecule names live in a separate file)
+df = pd.concat([df_names, df], axis=1)
 
 
-
-# Convert numeric columns to float
-for col in columns[1:]:
-    df[col] = pd.to_numeric(df[col], errors='coerce')
-
-
-# Remove unrealistic values
-df = df[
-    (df["Adiabatic IE (eV)"].abs() <= 1.3e2) &
-    (df["Cohesive Energy (kJ/mol)"].abs() <= 1.3e4)
-].reset_index(drop=True)
-
-print(df)
-# # loads metadata from final training for RF model, shows oob scores and hyperparameters
-# metadata = joblib.load("./models/rf_metadata.pkl")
-
-# print("Metadata Loaded Successfully!\n")
-# for key, value in metadata.items():
-#     print(f"{key}: {value}")
-
-
-
-# Load saved model and scaler
-model_path = "./models/final_rf_model.pkl"
-scaler_path = "./models/rf_X_scaler.pkl"
-
-rf_model = joblib.load(model_path)
-X_scaler = joblib.load(scaler_path)
-
-
-# Prepare input features and scale using same scaler used during training
-molecule_names = df["Molecule"].values
-X_new = df.iloc[:, 1:].values  
-X_new_scaled = X_scaler.transform(X_new)
-
-
-# Predict breakdown voltages
-preds = rf_model.predict(X_new_scaled)
-
-# Create prediction DataFrame
-df_pred = pd.DataFrame({
-    "Molecule": molecule_names,
-    "Predicted Breakdown Voltage (MV/m)": preds
-})
 
 
 # # Sort descending by predicted value
@@ -167,15 +65,15 @@ df_pred = pd.DataFrame({
 # ---------------------------------------------------------------
 # Merge predictions back into the full dataframe (df)
 # ---------------------------------------------------------------
-df_merged = df.merge(df_pred[["Molecule", "Predicted Breakdown Voltage (MV/m)"]],
-                     on="Molecule",
-                     how="left")
+# df_merged = df.merge(df_pred[["Molecule", "Predicted Breakdown Voltage (MV/m)"]],
+#                      on="Molecule",
+#                      how="left")
 
-# Sort by predicted breakdown strength (highest → lowest)
-df_merged = df_merged.sort_values(
-    by="Predicted Breakdown Voltage (MV/m)",
-    ascending=False
-).reset_index(drop=True)
+# # Sort by predicted breakdown strength (highest → lowest)
+# df_merged = df_merged.sort_values(
+#     by="Predicted Breakdown Voltage (MV/m)",
+#     ascending=False
+# ).reset_index(drop=True)
 
 # # # Create ranking index for plotting
 # # df_merged["Rank"] = df_merged.index
@@ -205,9 +103,9 @@ df_merged = df_merged.sort_values(
 
 
 #--------Finds repeat molecules in final merged dataset----------------------------
-for i in range(len(df_merged) - 1):
-    if (df_merged.iloc[i]["Vibrational ZPE (cm^-1)"] - df_merged.iloc[i + 1]["Vibrational ZPE (cm^-1)"]) and (df_merged.iloc[i]["Polarizability (Å^3)"] == df_merged.iloc[i + 1]["Polarizability (Å^3)"]) and (df_merged.iloc[i]["Dipole Moment (Debye)"] == df_merged.iloc[i + 1]["Dipole Moment (Debye)"]) and (df_merged.iloc[i]["Adiabatic IE (eV)"] == df_merged.iloc[i + 1]["Adiabatic IE (eV)"]) and (df_merged.iloc[i]["Cohesive Energy (kJ/mol)"] == df_merged.iloc[i + 1]["Cohesive Energy (kJ/mol)"]) and (df_merged.iloc[i]["Predicted Breakdown Voltage (MV/m)"] == df_merged.iloc[i + 1]["Predicted Breakdown Voltage (MV/m)"]):
-        print("Match found:", df_merged.iloc[i]["Molecule"], df_merged.iloc[i + 1]["Molecule"])
+# for i in range(len(df_merged) - 1):
+#     if (df_merged.iloc[i]["Vibrational ZPE (cm^-1)"] - df_merged.iloc[i + 1]["Vibrational ZPE (cm^-1)"]) and (df_merged.iloc[i]["Polarizability (Å^3)"] == df_merged.iloc[i + 1]["Polarizability (Å^3)"]) and (df_merged.iloc[i]["Dipole Moment (Debye)"] == df_merged.iloc[i + 1]["Dipole Moment (Debye)"]) and (df_merged.iloc[i]["Adiabatic IE (eV)"] == df_merged.iloc[i + 1]["Adiabatic IE (eV)"]) and (df_merged.iloc[i]["Cohesive Energy (kJ/mol)"] == df_merged.iloc[i + 1]["Cohesive Energy (kJ/mol)"]) and (df_merged.iloc[i]["Predicted Breakdown Voltage (MV/m)"] == df_merged.iloc[i + 1]["Predicted Breakdown Voltage (MV/m)"]):
+#         print("Match found:", df_merged.iloc[i]["Molecule"], df_merged.iloc[i + 1]["Molecule"])
 
 # ---------------------------------------------------------------
 # Create scatterplots for each feature vs. predicted breakdown
@@ -290,15 +188,6 @@ for i in range(len(df_merged) - 1):
 # feature importance
 #-----------------------------------------------------------------------------------
 
-# columns = [
-#     "Molecule",
-#     "Vibrational ZPE (cm^-1)",
-#     "Polarizability (Å^3)",
-#     "Dipole Moment (Debye)",
-#     "Adiabatic IE (eV)",
-#     "Cohesive Energy (kJ/mol)",
-#     "Breakdown Strength (MV/m)"
-# ]
 
 # feature_names = columns[1:-1]   # Only the 5 input features
 # target_col = columns[-1]
@@ -359,93 +248,104 @@ for i in range(len(df_merged) - 1):
 # model_path = "./models/final_rf_model.pkl"
 # scaler_path = "./models/rf_X_scaler.pkl"
 
-# rf_model = joblib.load(model_path)
-# X_scaler = joblib.load(scaler_path)
+rf_model = joblib.load(MODEL_PATH)
+feature_names = columns[1:6] + columns[7:]  # 8 input features (excluding molecule name and breakdown voltage)
+symbolic_feature_names = [
+    r"$\varepsilon_{V}$",   # Vibrational ZPE 
+    r"$\alpha$",                   # Polarizability
+    r"$\mu$",                      # Dipole Moment
+    r"$\varepsilon_{I}$",              # Adiabatic IE
+    r"$\varepsilon_{c}$",            # Cohesive Energy
+    r"$m$",           # Molecular Mass
+    r"$n_{e}$",           # Number of electrons
+    r"$V$"#,           # Molecular Volume
+    #"DS"
+]
 
-# X = df[feature_names].values
-# X_scaled = X_scaler.transform(X)
+# Build the feature matrix (raw, because RF was trained without scaling)
+X = df[feature_names].values
 
-# # -----------------------------
-# # 1. Feature Importance
-# # -----------------------------
-# importances = rf_model.feature_importances_
-# importance_df = pd.DataFrame({
-#     "Feature": feature_names,
-#     "Importance": importances
-# }).sort_values(by="Importance", ascending=False)
+# -----------------------------
+# 1. Feature Importance
+# -----------------------------
+importances = rf_model.feature_importances_
+importance_df = pd.DataFrame({
+    "Feature": feature_names,
+    "Importance": importances
+}).sort_values(by="Importance", ascending=False)
 
-# print("\n Random Forest Feature Importances:")
-# print(importance_df.to_string(index=False))
+print("\n Random Forest Feature Importances:")
+print(importance_df.to_string(index=False))
 
-# # -----------------------------
-# # 2. SHAP Analysis
-# # -----------------------------
-# explainer = shap.TreeExplainer(rf_model)
-# shap_values = explainer.shap_values(X_scaled)
+# -----------------------------
+# 2. SHAP Analysis
+# -----------------------------
+explainer = shap.TreeExplainer(rf_model)
+shap_values = explainer.shap_values(X)
 
-# # Convert to array if list
-# if isinstance(shap_values, list):
-#     shap_values = shap_values[0]
+# Convert to array if list
+if isinstance(shap_values, list):
+    shap_values = shap_values[0]
 
-# print("\n SHAP values computed successfully!\n")
+print("\n SHAP values computed successfully!\n")
 
-# # -----------------------------
-# # Create Output Directory and save to .csv
-# # -----------------------------
-# output_dir = "./results/shap_rf"
-# os.makedirs(output_dir, exist_ok=True)
+# -----------------------------
+# Create Output Directory and save to .csv
+# -----------------------------
+output_dir = OUTPUT_DIR
+os.makedirs(output_dir, exist_ok=True)
 
-# shap_df = pd.DataFrame(shap_values, columns=[f"SHAP_{f}" for f in feature_names])
-# shap_df.insert(0, "Molecule", df["Molecule"])
-# shap_df.to_csv(f"{output_dir}/rf_shap_values.csv", index=False)
+shap_df = pd.DataFrame(shap_values, columns=[f"SHAP_{f}" for f in feature_names])
+shap_df.insert(0, "Molecule", df_names)
+shap_df.to_csv(f"{output_dir}/rf_shap_values.csv", index=False)
 
-# # -----------------------------
-# # SHAP Summary Plot (Beeswarm)
-# # -----------------------------
-# plt.figure()
-# shap.summary_plot(shap_values, X_scaled, feature_names=symbolic_feature_names, show=False)
-# plt.xticks(fontsize=18)
-# plt.yticks(fontsize=18)
+# -----------------------------
+# SHAP Summary Plot (Beeswarm)
+# -----------------------------
+plt.figure()
+shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, show=False)
+plt.xticks(fontsize=18)
+plt.yticks(fontsize=18)
 
-# # Fix the color bar font
-# cbar = plt.gcf().axes[-1]  # last axis is the color bar in a SHAP summary plot
-# cbar.tick_params(labelsize=18)
+# Fix the color bar font
+cbar = plt.gcf().axes[-1]  # last axis is the color bar in a SHAP summary plot
+cbar.tick_params(labelsize=18)
 
-# if len(plt.gcf().axes) > 1:
-#     right_ax = plt.gcf().axes[1]
-#     right_ax.set_ylabel("Feature value", fontsize=18)
+if len(plt.gcf().axes) > 1:
+    right_ax = plt.gcf().axes[1]
+    right_ax.set_ylabel("Feature value", fontsize=18)
 
-# #plt.title("SHAP Summary: RF Feature Impact on Breakdown Strength")
-# plt.tight_layout()
-# plt.xlabel("SHAP Value (Impact on model)", fontsize=18, fontweight='bold')
-# plt.savefig(f"{output_dir}/shap_summary.png", dpi=300, bbox_inches="tight")
-# plt.close()
+#plt.title("SHAP Summary: RF Feature Impact on Breakdown Strength")
+plt.tight_layout()
+plt.xlabel("SHAP Value (Impact on model)", fontsize=18, fontweight='bold')
+plt.savefig(f"{output_dir}/shap_summary.png", dpi=300, bbox_inches="tight")
+plt.close()
 
 
-# # -----------------------------
-# # SHAP Bar Plot (Mean |SHAP|)
-# # -----------------------------
-# plt.figure()
-# shap.summary_plot(shap_values, X_scaled, feature_names=symbolic_feature_names, plot_type="bar", show=False)
-# #plt.title("SHAP Feature Importance (Mean |SHAP|)")
-# plt.xticks(fontsize=18)
-# plt.yticks(fontsize=18)
-# plt.tight_layout()
-# plt.xlabel("mean(|SHAP Value|)", fontsize=18, fontweight='bold')
-# plt.savefig(f"{output_dir}/shap_bar.png", dpi=300, bbox_inches="tight")
-# plt.close()
+# -----------------------------
+# SHAP Bar Plot (Mean |SHAP|)
+# -----------------------------
+plt.figure()
+shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, plot_type="bar", show=False)
+#plt.title("SHAP Feature Importance (Mean |SHAP|)")
+plt.xticks(fontsize=18)
+plt.yticks(fontsize=18)
+plt.tight_layout()
+plt.xlabel("mean(|SHAP Value|)", fontsize=18, fontweight='bold')
+plt.savefig(f"{output_dir}/shap_bar.png", dpi=300, bbox_inches="tight")
+plt.close()
 
 # -----------------------------
 # Dependence Plots
 # -----------------------------
-# for feat in feature_names:
-#     plt.figure()
-#     shap.dependence_plot(feat, shap_values, X_scaled, feature_names=feature_names, show=False)
-#     plt.title(f"SHAP Dependence: {feat}")
-#     plt.tight_layout()
-#     fname = feat.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "")
-#     plt.savefig(f"{output_dir}/shap_dependence_{fname}.png", dpi=300, bbox_inches="tight")
-#     plt.close()
+for feat in feature_names:
+    plt.figure()
+    shap.dependence_plot(feat, shap_values, X, feature_names=feature_names, show=False)
+    plt.title(f"SHAP Dependence: {feat}")
+    plt.tight_layout()
+    fname = feat.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "")
+    plt.savefig(f"{output_dir}/shap_dependence_{fname}.png", dpi=300, bbox_inches="tight")
+    plt.close()
 
 
 # print("\n SHAP analysis complete!")

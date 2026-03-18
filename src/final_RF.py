@@ -116,13 +116,13 @@ df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
 
 # Convert to original units
-#oob_rmse = oob_rmse_std * scaler_label.scale_[0]
+# oob_rmse = oob_rmse_std * scaler_label.scale_[0]
 
-# ------------ Train Final Model on 100% of Data ----------------
+# ------------ Train Final Model on 100% of Data? ----------------
 
-seed = 117
+seed = 137
 
-#----------Train initial model
+# #----------Train initial model
 data_train, data_test = train_test_split(df, test_size=0.1, random_state=seed)
 
 X_train = data_train.drop(columns=['Breakdown Voltage'])
@@ -168,9 +168,10 @@ oob_rmse = np.sqrt(mean_squared_error(y_train_input, rf.oob_prediction_))
 
 y_test_pred = rf.predict(X_test_input)
 test_rmse = np.sqrt(mean_squared_error(y_test_input, y_test_pred))
+print("Test RMSE:", test_rmse)
 
 # Save the model to the results folder
-joblib.dump(rf, "./models/rf_min_model.pkl")
+joblib.dump(rf, "./models/eight_descriptors/rf_min_model.pkl")
 
 
 
