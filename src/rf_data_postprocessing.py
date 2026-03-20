@@ -22,18 +22,29 @@ columns = [
     "Molecular Volume"
 ]
 
-MODEL_PATH = "./models/eight_descriptors/rf_avg_model.pkl"
-OUTPUT_DIR = "./results/shap_rf_8_descriptors_all"
+MODEL_PATH = "./models/seven_descriptors/rf_avg_model.pkl"
+OUTPUT_DIR = "./results/shap_rf_7_descriptors_all"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
 df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
+df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
+
 # Attach molecule names to the feature data (molecule names live in a separate file)
 df = pd.concat([df_names, df], axis=1)
 
+# ------------ Make predictions and calculate test R² and RMSE -------------
+rf_model = joblib.load(MODEL_PATH)
+#feature_names = columns[1:6] + columns[7:]  # 8 input
+X = df_test[columns[2:6] + columns[7:]]
+y_true = df_test["Breakdown Voltage"].values
 
-
+y_pred = rf_model.predict(X)
+rf_RMSE = np.sqrt(np.mean((y_true - y_pred) ** 2))
+print(f"RF RMSE on test data: {rf_RMSE:.3f}")
+r2 = r2_score(y_true, y_pred)
+print(f"R² on test data: {r2:.3f}")
 
 # # Sort descending by predicted value
 # df_pred = df_pred.sort_values(by="Predicted Breakdown Voltage (MV/m)", ascending=False).reset_index(drop=True)
@@ -245,13 +256,11 @@ df = pd.concat([df_names, df], axis=1)
 # # -----------------------------
 # # Load Model + Scaler
 # # -----------------------------
-# model_path = "./models/final_rf_model.pkl"
-# scaler_path = "./models/rf_X_scaler.pkl"
 
-rf_model = joblib.load(MODEL_PATH)
-feature_names = columns[1:6] + columns[7:]  # 8 input features (excluding molecule name and breakdown voltage)
+# rf_model = joblib.load(MODEL_PATH)
+feature_names = columns[2:6] + columns[7:]  # 7 input features (excluding molecule name and breakdown voltage)
 symbolic_feature_names = [
-    r"$\varepsilon_{V}$",   # Vibrational ZPE 
+    #r"$\varepsilon_{V}$",   # Vibrational ZPE 
     r"$\alpha$",                   # Polarizability
     r"$\mu$",                      # Dipole Moment
     r"$\varepsilon_{I}$",              # Adiabatic IE
@@ -347,6 +356,3 @@ for feat in feature_names:
     plt.savefig(f"{output_dir}/shap_dependence_{fname}.png", dpi=300, bbox_inches="tight")
     plt.close()
 
-
-# print("\n SHAP analysis complete!")
-# print(f" Results saved in: {output_dir}\n")

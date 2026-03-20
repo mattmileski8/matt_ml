@@ -5,7 +5,7 @@ import numpy as np
 # Creates 
 
 # Load both prediction files
-df_rf = pd.read_csv("./results/rf_test_rmse_per_loop.csv")
+df_rf = pd.read_csv("./results/rf_test_rmse_per_loop_7.csv")
 df_nn = pd.read_csv("./results/nn_test_rmse_per_loop.csv")
 
 # Find the minimum and maximum Test_RMSE for both models and the corresponding rows
@@ -29,8 +29,13 @@ print("\nRF max:\n", max_rf_rmse_row)
 print("\nNN min:\n", min_nn_rmse_row)
 print("\nNN max:\n", max_nn_rmse_row)
 
+
+# Find the model run whose test RMSE is closest to the mean (closest to the average performance)
+closest_rf_row = df_rf.loc[(df_rf["Test_RMSE"] - avg_rf_test_rmse).abs().idxmin()]
+closest_nn_row = df_nn.loc[(df_nn["Test_RMSE"] - avg_nn_test_rmse).abs().idxmin()]
+
+print("\nRF closest to average:\n", closest_rf_row)
+print("\nNN closest to average:\n", closest_nn_row)
+
 print("\nRF average Test_RMSE:", avg_rf_test_rmse)
 print("NN average Test_RMSE:", avg_nn_test_rmse)
-
-# print(np.mean(df_rf["Test_RMSE"]))
-# print(np.mean(df_nn["Test_RMSE"]))
