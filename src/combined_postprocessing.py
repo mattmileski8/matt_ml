@@ -6,7 +6,7 @@ import numpy as np
 
 # Load both prediction files
 df_rf = pd.read_csv("./results/rf_test_rmse_per_loop_7.csv")
-df_nn = pd.read_csv("./results/nn_test_rmse_per_loop.csv")
+df_nn = pd.read_csv("./results/nn_test_rmse_per_loop_7.csv")
 
 # Find the minimum and maximum Test_RMSE for both models and the corresponding rows
 min_rf_test_rmse = np.min(df_rf["Test_RMSE"])
