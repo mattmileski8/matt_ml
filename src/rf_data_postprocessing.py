@@ -30,9 +30,16 @@ df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
 df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
 df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
+df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
+
+df_pred = pd.read_csv("./data/molecular_tm_data_sorted.txt", sep="\t")
+df_pred_names = pd.read_csv("./data/molecular_tm_names_sorted.txt", sep="\t")
 
 # Attach molecule names to the feature data (molecule names live in a separate file)
 df = pd.concat([df_names, df], axis=1)
+df_test = pd.concat([df_test_names, df_test], axis=1)
+df_pred = pd.concat([df_pred_names, df_pred], axis=1)
+
 
 # ------------ Make predictions and calculate test R² and RMSE -------------
 rf_model = joblib.load(MODEL_PATH)
@@ -48,6 +55,8 @@ print(f"RF RMSE on test data: {rf_RMSE:.3f}")
 r2 = r2_score(y_true_test, y_pred_test)
 print(f"R² on test data: {r2:.3f}")
 
+
+
 # --------------- Make predictions on training data and plot ------------------------------------
 X_train = df[feature_names]
 y_true_train = df["Breakdown Voltage"].values
@@ -59,6 +68,8 @@ r2_train = r2_score(y_true_train, y_pred_train)
 print(f"R² on training data: {r2_train:.3f}")
 
 
+
+# ----------------------- Parity Plot ----------------------------------------
 fig, ax = plt.subplots(figsize=(4, 4))
 
 ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Training data (R² = {r2_train:.3f})')#, RMSE = {rf_RMSE_train:.3f})')
@@ -75,6 +86,35 @@ ax.legend(fontsize=9)
 plt.tight_layout()
 plt.savefig("./images/rf_parity_plot_8_descriptors.png", dpi=300, bbox_inches="tight")
 
+# ----------------------------Make predictions on predict data----------------------------------------------
+
+X_tm = df_pred[feature_names]
+y_pred_tm = rf_model.predict(X_tm)
+
+y_pred_tm_series = pd.Series(y_pred_tm, name='Predicted Breakdown Voltage')
+tm_prediction_dataset = X_tm.copy()
+tm_prediction_dataset.insert(0, 'Predicted Breakdown Voltage', y_pred_tm_series)
+tm_prediction_dataset.insert(0, 'Molecule', df_pred['Molecule'])
+
+tm_prediction_dataset.to_csv('./results/rf_tm_prediction_dataset.csv', index=False)
+
+
+
+# Save training predictions with molecule names and features to .csv for later analysis
+y_pred_train_series = pd.Series(y_pred_train, name='y_pred_train')
+train_prediction_dataset = X_train.copy()
+train_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_train_series)
+train_prediction_dataset.insert(0, 'Molecule', df['Molecule'])
+
+train_prediction_dataset.to_csv('./results/rf_train_prediction_dataset.csv', index=False)
+
+# Save test predictions with molecule names and features to .csv for later analysis
+y_pred_test_series = pd.Series(y_pred_test, name='y_pred_test')
+test_prediction_dataset = X.copy()
+test_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_test_series)
+test_prediction_dataset.insert(0, 'Molecule', df_test['Molecule'])
+
+test_prediction_dataset.to_csv('./results/rf_test_prediction_dataset.csv', index=False)
 
 
 
