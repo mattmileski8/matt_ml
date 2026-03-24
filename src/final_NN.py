@@ -31,164 +31,164 @@ from sklearn.metrics import r2_score
 #             self.prev_lr = lr
 
 
-# #SEED = 3
-RMSE_array = []
-seed_array = []
-best_epoch_array = []
-external_rmse_array = []
-r2_train_array = []
-r2_external_test_array = []
+# # #SEED = 3
+# RMSE_array = []
+# seed_array = []
+# best_epoch_array = []
+# external_rmse_array = []
+# r2_train_array = []
+# r2_external_test_array = []
 
-for i in range(150):
-    SEED = i
+# for i in range(150):
+#     SEED = i
 
-    random.seed(SEED)
-    np.random.seed(SEED)
-    tf.random.set_seed(SEED)
+#     random.seed(SEED)
+#     np.random.seed(SEED)
+#     tf.random.set_seed(SEED)
 
-    # Define the column names based on the header
-    columns = [
-        "Molecule",
-        "Vibrational ZPE",
-        "Polarizability",
-        "Dipole Moment",
-        "Adiabatic IE",
-        "Cohesive Energy",
-        "Breakdown Voltage", 
-        "Molecular Mass",
-        "Number e-",
-        "Molecular Volume"
-    ]
+#     # Define the column names based on the header
+#     columns = [
+#         "Molecule",
+#         "Vibrational ZPE",
+#         "Polarizability",
+#         "Dipole Moment",
+#         "Adiabatic IE",
+#         "Cohesive Energy",
+#         "Breakdown Voltage", 
+#         "Molecular Mass",
+#         "Number e-",
+#         "Molecular Volume"
+#     ]
 
-    # Load the dataframe saved from preprocessing
-    df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
-    df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
+#     # Load the dataframe saved from preprocessing
+#     df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+#     df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
-    # verify
-    print(df.head())
-    print(df.dtypes)
+#     # verify
+#     print(df.head())
+#     print(df.dtypes)
 
-    # --- NEW: Split 10% for testing ---
-    n_samples = len(df)
-    train_val_indices, test_indices = train_test_split(
-        np.arange(n_samples), test_size=0.1, random_state=SEED
-    )
+#     # --- NEW: Split 10% for testing ---
+#     n_samples = len(df)
+#     train_val_indices, test_indices = train_test_split(
+#         np.arange(n_samples), test_size=0.1, random_state=SEED
+#     )
 
-    # Train+val data (90%)
-    X_train_val = df.iloc[train_val_indices].drop(columns=["Breakdown Voltage", "Dipole Moment"])
-    y_train_val = df.iloc[train_val_indices]["Breakdown Voltage"]
+#     # Train+val data (90%)
+#     X_train_val = df.iloc[train_val_indices].drop(columns=["Breakdown Voltage", "Dipole Moment"])
+#     y_train_val = df.iloc[train_val_indices]["Breakdown Voltage"]
 
-    # Test data (10%)
-    X_test = df.iloc[test_indices].drop(columns=["Breakdown Voltage", "Dipole Moment"])
-    y_test = df.iloc[test_indices]["Breakdown Voltage"]
+#     # Test data (10%)
+#     X_test = df.iloc[test_indices].drop(columns=["Breakdown Voltage", "Dipole Moment"])
+#     y_test = df.iloc[test_indices]["Breakdown Voltage"]
 
-    # --- Scale only on train+val data ---
-    scaler_X = StandardScaler()
-    X_train_val_scaled = scaler_X.fit_transform(X_train_val)
+#     # --- Scale only on train+val data ---
+#     scaler_X = StandardScaler()
+#     X_train_val_scaled = scaler_X.fit_transform(X_train_val)
 
-    scaler_y = StandardScaler()
-    y_train_val_scaled = scaler_y.fit_transform(y_train_val.values.reshape(-1, 1))
+#     scaler_y = StandardScaler()
+#     y_train_val_scaled = scaler_y.fit_transform(y_train_val.values.reshape(-1, 1))
 
-    X_input = np.array(X_train_val_scaled)
-    y_input = np.array(y_train_val_scaled)
+#     X_input = np.array(X_train_val_scaled)
+#     y_input = np.array(y_train_val_scaled)
 
-    early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=3500, restore_best_weights=True)
+#     early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=3500, restore_best_weights=True)
 
-    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-    # tensorboard --logdir logs/fit
+#     log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+#     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+#     # tensorboard --logdir logs/fit
 
-    numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
-    hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
-    hidden1 = keras.layers.Dropout(0.1)(hidden1)
-    hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
-    hidden2 = keras.layers.Dropout(0.1)(hidden2)
-    #concat = keras.layers.Concatenate()([numerical_input,hidden2])
-    output = keras.layers.Dense(1)(hidden2)
-    model = keras.Model(inputs=numerical_input, outputs=output)
-
-
-    model.compile(
-        optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
-        loss='mean_squared_error',
-        metrics=['mae']
-    )
-    #learning_rate=0.006807936096668156
-
-    hist1 = model.fit(
-        X_input, y_input,
-        epochs=10000,
-        batch_size=4,
-        validation_split=0.15,  # Now ~13.5% of total data for validation
-        callbacks=[early_stopping],#tensorboard_callback],  etc.
-        verbose=1
-    )
-
-    # --- NEW: Evaluate on internal test set ---
-    X_test_scaled = scaler_X.transform(X_test)
-    y_pred_scaled = model.predict(X_test_scaled)
-    y_pred = scaler_y.inverse_transform(y_pred_scaled).flatten()
-    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-    RMSE_array.append(rmse)
+#     numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
+#     hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
+#     hidden1 = keras.layers.Dropout(0.1)(hidden1)
+#     hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
+#     hidden2 = keras.layers.Dropout(0.1)(hidden2)
+#     #concat = keras.layers.Concatenate()([numerical_input,hidden2])
+#     output = keras.layers.Dense(1)(hidden2)
+#     model = keras.Model(inputs=numerical_input, outputs=output)
 
 
-    r2_test = r2_score(y_test, y_pred)
+#     model.compile(
+#         optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
+#         loss='mean_squared_error',
+#         metrics=['mae']
+#     )
+#     #learning_rate=0.006807936096668156
 
-    print(f"Loop {i+1} Test RMSE: {rmse:.4f}")
+#     hist1 = model.fit(
+#         X_input, y_input,
+#         epochs=10000,
+#         batch_size=4,
+#         validation_split=0.15,  # Now ~13.5% of total data for validation
+#         callbacks=[early_stopping],#tensorboard_callback],  etc.
+#         verbose=1
+#     )
 
-    seed_array.append(SEED)
-    best_epoch_array.append(np.argmin(hist1.history['val_mae']) + 1)
+#     # --- NEW: Evaluate on internal test set ---
+#     X_test_scaled = scaler_X.transform(X_test)
+#     y_pred_scaled = model.predict(X_test_scaled)
+#     y_pred = scaler_y.inverse_transform(y_pred_scaled).flatten()
+#     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+#     RMSE_array.append(rmse)
 
 
-    # ------External test set ---------
-    # Load test data
-    df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
-    #df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
+#     r2_test = r2_score(y_test, y_pred)
 
-    # Separate features and target
-    X_test_external = df_test.drop(columns=["Breakdown Voltage", "Dipole Moment"])
-    y_test_external = df_test["Breakdown Voltage"]
+#     print(f"Loop {i+1} Test RMSE: {rmse:.4f}")
 
-    # Import scalers used in training
-    X_test_external_scaled = scaler_X.transform(X_test_external)
+#     seed_array.append(SEED)
+#     best_epoch_array.append(np.argmin(hist1.history['val_mae']) + 1)
 
-    # Predict test set
-    y_pred_external_scaled = model.predict(X_test_external_scaled)
 
-    # Convert predictions back into relative DS units
-    y_pred_external = scaler_y.inverse_transform(y_pred_external_scaled)
-    ypred_external = y_pred_external.flatten()
+#     # ------External test set ---------
+#     # Load test data
+#     df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
+#     #df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
 
-    # Calculate Test RMSE
-    external_rmse = np.sqrt(mean_squared_error(y_test_external, y_pred_external))
-    external_rmse_array.append(external_rmse)
-    #print(f"Test RMSE: {rmse:.4f}")
+#     # Separate features and target
+#     X_test_external = df_test.drop(columns=["Breakdown Voltage", "Dipole Moment"])
+#     y_test_external = df_test["Breakdown Voltage"]
 
-    # df_train_check = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
-    # X_train_check = df_train_check.drop(columns=["Breakdown Voltage", "Dipole Moment"])
-    # y_train_check = df_train_check["Breakdown Voltage"]
+#     # Import scalers used in training
+#     X_test_external_scaled = scaler_X.transform(X_test_external)
 
-    # X_train_check_scaled = scaler_X.transform(X_train_check)
-    # y_train_pred_scaled = model.predict(X_train_check_scaled)
-    # y_train_pred = scaler_y.inverse_transform(y_train_pred_scaled).flatten()
+#     # Predict test set
+#     y_pred_external_scaled = model.predict(X_test_external_scaled)
 
-    # R² scores
+#     # Convert predictions back into relative DS units
+#     y_pred_external = scaler_y.inverse_transform(y_pred_external_scaled)
+#     ypred_external = y_pred_external.flatten()
+
+#     # Calculate Test RMSE
+#     external_rmse = np.sqrt(mean_squared_error(y_test_external, y_pred_external))
+#     external_rmse_array.append(external_rmse)
+#     #print(f"Test RMSE: {rmse:.4f}")
+
+#     # df_train_check = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+#     # X_train_check = df_train_check.drop(columns=["Breakdown Voltage", "Dipole Moment"])
+#     # y_train_check = df_train_check["Breakdown Voltage"]
+
+#     # X_train_check_scaled = scaler_X.transform(X_train_check)
+#     # y_train_pred_scaled = model.predict(X_train_check_scaled)
+#     # y_train_pred = scaler_y.inverse_transform(y_train_pred_scaled).flatten()
+
+#     # R² scores
     
-    r2_external_test = r2_score(y_test_external, y_pred_external)
+#     r2_external_test = r2_score(y_test_external, y_pred_external)
 
-    r2_train_array.append(r2_test)
-    r2_external_test_array.append(r2_external_test)
+#     r2_train_array.append(r2_test)
+#     r2_external_test_array.append(r2_external_test)
 
 
-# --- NEW: After the loop, save RMSE_array ---
-rmse_df = pd.DataFrame({"Seed": seed_array, 
-                        "Test_RMSE": RMSE_array,
-                        "External_Test_RMSE": external_rmse_array,
-                        "R2_Train": r2_train_array,
-                        "R2_External_Test": r2_external_test_array,
-                        "Best_Epoch": best_epoch_array})
-rmse_df.to_csv("./results/nn_test_rmse_per_loop_7.csv", index=False)
-print("Saved test RMSE per loop to ./results/nn_test_rmse_per_loop_7.csv")
+# # --- NEW: After the loop, save RMSE_array ---
+# rmse_df = pd.DataFrame({"Seed": seed_array, 
+#                         "Test_RMSE": RMSE_array,
+#                         "External_Test_RMSE": external_rmse_array,
+#                         "R2_Train": r2_train_array,
+#                         "R2_External_Test": r2_external_test_array,
+#                         "Best_Epoch": best_epoch_array})
+# rmse_df.to_csv("./results/nn_test_rmse_per_loop_7.csv", index=False)
+# print("Saved test RMSE per loop to ./results/nn_test_rmse_per_loop_7.csv")
 
 
 
@@ -215,100 +215,100 @@ print("Saved test RMSE per loop to ./results/nn_test_rmse_per_loop_7.csv")
 # ------------- Train Final Model -------------------------------------
 
 
-# SEED = 93
+SEED = 115
 
-# random.seed(SEED)
-# np.random.seed(SEED)
-# tf.random.set_seed(SEED)
+random.seed(SEED)
+np.random.seed(SEED)
+tf.random.set_seed(SEED)
 
-# # Define the column names based on the header
-# columns = [
-#     "Molecule",
-#     "Vibrational ZPE",
-#     "Polarizability",
-#     "Dipole Moment",
-#     "Adiabatic IE",
-#     "Cohesive Energy",
-#     "Breakdown Voltage", 
-#     "Molecular Mass",
-#     "Number e-",
-#     "Molecular Volume"
-# ]
+# Define the column names based on the header
+columns = [
+    "Molecule",
+    "Vibrational ZPE",
+    "Polarizability",
+    "Dipole Moment",
+    "Adiabatic IE",
+    "Cohesive Energy",
+    "Breakdown Voltage", 
+    "Molecular Mass",
+    "Number e-",
+    "Molecular Volume"
+]
 
-# # Load the dataframe saved from preprocessing
-# df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
-# df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
+# Load the dataframe saved from preprocessing
+df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
-# # verify
-# print(df.head())
-# print(df.dtypes)
+# verify
+print(df.head())
+print(df.dtypes)
 
-# # --- NEW: Split 10% for testing ---
-# n_samples = len(df)
-# train_val_indices, test_indices = train_test_split(
-#     np.arange(n_samples), test_size=0.1, random_state=SEED
-# )
+# --- NEW: Split 10% for testing ---
+n_samples = len(df)
+train_val_indices, test_indices = train_test_split(
+    np.arange(n_samples), test_size=0.1, random_state=SEED
+)
 
-# # Train+val data (90%)
-# X_train_val = df.iloc[train_val_indices].drop(columns=["Breakdown Voltage", "Dipole Moment"])
-# y_train_val = df.iloc[train_val_indices]["Breakdown Voltage"]
+# Train+val data (90%)
+X_train_val = df.iloc[train_val_indices].drop(columns=["Breakdown Voltage"])#, "Dipole Moment"])
+y_train_val = df.iloc[train_val_indices]["Breakdown Voltage"]
 
-# # Test data (10%)
-# X_test = df.iloc[test_indices].drop(columns=["Breakdown Voltage", "Dipole Moment"])
-# y_test = df.iloc[test_indices]["Breakdown Voltage"]
+# Test data (10%)
+X_test = df.iloc[test_indices].drop(columns=["Breakdown Voltage"])#, "Dipole Moment"])
+y_test = df.iloc[test_indices]["Breakdown Voltage"]
 
-# # --- Scale only on train+val data ---
-# scaler_X = StandardScaler()
-# X_train_val_scaled = scaler_X.fit_transform(X_train_val)
+# --- Scale only on train+val data ---
+scaler_X = StandardScaler()
+X_train_val_scaled = scaler_X.fit_transform(X_train_val)
 
-# scaler_y = StandardScaler()
-# y_train_val_scaled = scaler_y.fit_transform(y_train_val.values.reshape(-1, 1))
+scaler_y = StandardScaler()
+y_train_val_scaled = scaler_y.fit_transform(y_train_val.values.reshape(-1, 1))
 
-# X_input = np.array(X_train_val_scaled)
-# y_input = np.array(y_train_val_scaled)
+X_input = np.array(X_train_val_scaled)
+y_input = np.array(y_train_val_scaled)
 
-# early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=3500, restore_best_weights=True)
+early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=3500, restore_best_weights=True)
 
-# log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-# tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-# # tensorboard --logdir logs/fit
+log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+# tensorboard --logdir logs/fit
 
-# numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
-# hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
-# hidden1 = keras.layers.Dropout(0.1)(hidden1)
-# hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
-# hidden2 = keras.layers.Dropout(0.1)(hidden2)
-# #concat = keras.layers.Concatenate()([numerical_input,hidden2])
-# output = keras.layers.Dense(1)(hidden2)
-# model = keras.Model(inputs=numerical_input, outputs=output)
+numerical_input = keras.layers.Input(shape=(X_input.shape[1],))
+hidden1 = keras.layers.Dense(16, activation='swish')(numerical_input)
+hidden1 = keras.layers.Dropout(0.1)(hidden1)
+hidden2 = keras.layers.Dense(16, activation='swish')(hidden1)
+hidden2 = keras.layers.Dropout(0.1)(hidden2)
+#concat = keras.layers.Concatenate()([numerical_input,hidden2])
+output = keras.layers.Dense(1)(hidden2)
+model = keras.Model(inputs=numerical_input, outputs=output)
 
 
-# model.compile(
-#     optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
-#     loss='mean_squared_error',
-#     metrics=['mae']
-# )
-# #learning_rate=0.006807936096668156
+model.compile(
+    optimizer=keras.optimizers.Adam(learning_rate=0.006807936096668156), 
+    loss='mean_squared_error',
+    metrics=['mae']
+)
+#learning_rate=0.006807936096668156
 
-# hist1 = model.fit(
-#     X_input, y_input,
-#     epochs=10000,
-#     batch_size=4,
-#     validation_split=0.15,  # Now ~13.5% of total data for validation
-#     #callbacks=[early_stopping],#tensorboard_callback],  etc.
-#     verbose=1
-# )
+hist1 = model.fit(
+    X_input, y_input,
+    epochs=48,
+    batch_size=4,
+    validation_split=0.15,  # Now ~13.5% of total data for validation
+    #callbacks=[early_stopping],#tensorboard_callback],  etc.
+    verbose=1
+)
 
-# # --- NEW: Evaluate on internal test set ---
-# X_test_scaled = scaler_X.transform(X_test)
-# y_pred_scaled = model.predict(X_test_scaled)
-# y_pred = scaler_y.inverse_transform(y_pred_scaled).flatten()
-# rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-# print(f"Final Model Test RMSE: {rmse:.4f}")
+# --- NEW: Evaluate on internal test set ---
+X_test_scaled = scaler_X.transform(X_test)
+y_pred_scaled = model.predict(X_test_scaled)
+y_pred = scaler_y.inverse_transform(y_pred_scaled).flatten()
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+print(f"Final Model Test RMSE: {rmse:.4f}")
 
-# model.save("./models/seven_descriptors/nn_avg_model.keras")
-# joblib.dump(scaler_X, "./models/seven_descriptors/nn_avg_scaler_X.pkl")
-# joblib.dump(scaler_y, "./models/seven_descriptors/nn_avg_scaler_y.pkl")
+model.save("./models/eight_descriptors/nn_avg_model.keras")
+joblib.dump(scaler_X, "./models/eight_descriptors/nn_avg_scaler_X.pkl")
+joblib.dump(scaler_y, "./models/eight_descriptors/nn_avg_scaler_y.pkl")
 
 
 

@@ -22,8 +22,8 @@ columns = [
     "Molecular Volume"
 ]
 
-MODEL_PATH = "./models/seven_descriptors/rf_avg_model.pkl"
-OUTPUT_DIR = "./results/shap_rf_7_descriptors_all"
+MODEL_PATH = "./models/eight_descriptors/rf_avg_model.pkl"
+OUTPUT_DIR = "./results/shap_rf_8_descriptors_all"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
@@ -36,15 +36,51 @@ df = pd.concat([df_names, df], axis=1)
 
 # ------------ Make predictions and calculate test R² and RMSE -------------
 rf_model = joblib.load(MODEL_PATH)
-#feature_names = columns[1:6] + columns[7:]  # 8 input
-X = df_test[columns[2:6] + columns[7:]]
-y_true = df_test["Breakdown Voltage"].values
+feature_names = columns[1:6] + columns[7:]  # 8 input features (excluding DS)
+#feature_names = columns[2:6] + columns[7:]  # 7 input features (excluding DS, Vibrational ZPE)
+#feature_names = columns[2:6] + columns[7:8] + columns[9:]  # 6 input features (excluding DS, Vibrational ZPE, and # e-)
+X = df_test[feature_names]
+y_true_test = df_test["Breakdown Voltage"].values
 
-y_pred = rf_model.predict(X)
-rf_RMSE = np.sqrt(np.mean((y_true - y_pred) ** 2))
+y_pred_test = rf_model.predict(X)
+rf_RMSE = np.sqrt(np.mean((y_true_test - y_pred_test) ** 2))
 print(f"RF RMSE on test data: {rf_RMSE:.3f}")
-r2 = r2_score(y_true, y_pred)
+r2 = r2_score(y_true_test, y_pred_test)
 print(f"R² on test data: {r2:.3f}")
+
+# --------------- Make predictions on training data and plot ------------------------------------
+X_train = df[feature_names]
+y_true_train = df["Breakdown Voltage"].values
+
+y_pred_train = rf_model.predict(X_train)
+rf_RMSE_train = np.sqrt(np.mean((y_true_train - y_pred_train) ** 2))
+print(f"RF RMSE on training data: {rf_RMSE_train:.3f}")
+r2_train = r2_score(y_true_train, y_pred_train)
+print(f"R² on training data: {r2_train:.3f}")
+
+
+fig, ax = plt.subplots(figsize=(4, 4))
+
+ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Training data (R² = {r2_train:.3f})')#, RMSE = {rf_RMSE_train:.3f})')
+ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test data (R² = {r2:.3f})')#, RMSE = {rf_RMSE:.3f})')
+# Plot y=x parity line
+min_val = min(y_true_train.min(), y_pred_train.min())
+max_val = max(y_true_train.max(), y_pred_train.max())
+ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1)#, label='Parity line')
+
+ax.set_xlabel('True Relative Dielectric Strength', fontweight='bold')
+ax.set_ylabel('Predicted Relative Dielectric Strength', fontweight='bold')
+#ax.set_title(f'Parity Plot')
+ax.legend(fontsize=9)
+plt.tight_layout()
+plt.savefig("./images/rf_parity_plot_8_descriptors.png", dpi=300, bbox_inches="tight")
+
+
+
+
+
+
+# -----------------------------------------------------------------------------------------------
 
 # # Sort descending by predicted value
 # df_pred = df_pred.sort_values(by="Predicted Breakdown Voltage (MV/m)", ascending=False).reset_index(drop=True)
@@ -258,101 +294,111 @@ print(f"R² on test data: {r2:.3f}")
 # # -----------------------------
 
 # rf_model = joblib.load(MODEL_PATH)
-feature_names = columns[2:6] + columns[7:]  # 7 input features (excluding molecule name and breakdown voltage)
-symbolic_feature_names = [
-    #r"$\varepsilon_{V}$",   # Vibrational ZPE 
-    r"$\alpha$",                   # Polarizability
-    r"$\mu$",                      # Dipole Moment
-    r"$\varepsilon_{I}$",              # Adiabatic IE
-    r"$\varepsilon_{c}$",            # Cohesive Energy
-    r"$m$",           # Molecular Mass
-    r"$n_{e}$",           # Number of electrons
-    r"$V$"#,           # Molecular Volume
-    #"DS"
-]
-
-# Build the feature matrix (raw, because RF was trained without scaling)
-X = df[feature_names].values
-
-# -----------------------------
-# 1. Feature Importance
-# -----------------------------
-importances = rf_model.feature_importances_
-importance_df = pd.DataFrame({
-    "Feature": feature_names,
-    "Importance": importances
-}).sort_values(by="Importance", ascending=False)
-
-print("\n Random Forest Feature Importances:")
-print(importance_df.to_string(index=False))
-
-# -----------------------------
-# 2. SHAP Analysis
-# -----------------------------
-explainer = shap.TreeExplainer(rf_model)
-shap_values = explainer.shap_values(X)
-
-# Convert to array if list
-if isinstance(shap_values, list):
-    shap_values = shap_values[0]
-
-print("\n SHAP values computed successfully!\n")
-
-# -----------------------------
-# Create Output Directory and save to .csv
-# -----------------------------
-output_dir = OUTPUT_DIR
-os.makedirs(output_dir, exist_ok=True)
-
-shap_df = pd.DataFrame(shap_values, columns=[f"SHAP_{f}" for f in feature_names])
-shap_df.insert(0, "Molecule", df_names)
-shap_df.to_csv(f"{output_dir}/rf_shap_values.csv", index=False)
-
-# -----------------------------
-# SHAP Summary Plot (Beeswarm)
-# -----------------------------
-plt.figure()
-shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, show=False)
-plt.xticks(fontsize=18)
-plt.yticks(fontsize=18)
-
-# Fix the color bar font
-cbar = plt.gcf().axes[-1]  # last axis is the color bar in a SHAP summary plot
-cbar.tick_params(labelsize=18)
-
-if len(plt.gcf().axes) > 1:
-    right_ax = plt.gcf().axes[1]
-    right_ax.set_ylabel("Feature value", fontsize=18)
-
-#plt.title("SHAP Summary: RF Feature Impact on Breakdown Strength")
-plt.tight_layout()
-plt.xlabel("SHAP Value (Impact on model)", fontsize=18, fontweight='bold')
-plt.savefig(f"{output_dir}/shap_summary.png", dpi=300, bbox_inches="tight")
-plt.close()
 
 
-# -----------------------------
-# SHAP Bar Plot (Mean |SHAP|)
-# -----------------------------
-plt.figure()
-shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, plot_type="bar", show=False)
-#plt.title("SHAP Feature Importance (Mean |SHAP|)")
-plt.xticks(fontsize=18)
-plt.yticks(fontsize=18)
-plt.tight_layout()
-plt.xlabel("mean(|SHAP Value|)", fontsize=18, fontweight='bold')
-plt.savefig(f"{output_dir}/shap_bar.png", dpi=300, bbox_inches="tight")
-plt.close()
 
-# -----------------------------
-# Dependence Plots
-# -----------------------------
-for feat in feature_names:
-    plt.figure()
-    shap.dependence_plot(feat, shap_values, X, feature_names=feature_names, show=False)
-    plt.title(f"SHAP Dependence: {feat}")
-    plt.tight_layout()
-    fname = feat.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "")
-    plt.savefig(f"{output_dir}/shap_dependence_{fname}.png", dpi=300, bbox_inches="tight")
-    plt.close()
+
+
+
+
+#------------------------------ SHAP Analysis -----------------------------------
+
+
+
+# symbolic_feature_names = [
+#     r"$\varepsilon_{V}$",   # Vibrational ZPE 
+#     r"$\alpha$",                   # Polarizability
+#     r"$\mu$",                      # Dipole Moment
+#     r"$\varepsilon_{I}$",              # Adiabatic IE
+#     r"$\varepsilon_{c}$",            # Cohesive Energy
+#     r"$m$",           # Molecular Mass
+#     r"$n_{e}$",           # Number of electrons
+#     r"$V$"#,           # Molecular Volume
+#     #"DS"
+# ]
+
+# # Build the feature matrix (raw, because RF was trained without scaling)
+# X = df[feature_names].values
+
+# # -----------------------------
+# # 1. Feature Importance
+# # -----------------------------
+# importances = rf_model.feature_importances_
+# importance_df = pd.DataFrame({
+#     "Feature": feature_names,
+#     "Importance": importances
+# }).sort_values(by="Importance", ascending=False)
+
+# print("\n Random Forest Feature Importances:")
+# print(importance_df.to_string(index=False))
+
+# # -----------------------------
+# # 2. SHAP Analysis
+# # -----------------------------
+# explainer = shap.TreeExplainer(rf_model)
+# shap_values = explainer.shap_values(X)
+
+# # Convert to array if list
+# if isinstance(shap_values, list):
+#     shap_values = shap_values[0]
+
+# print("\n SHAP values computed successfully!\n")
+
+# # -----------------------------
+# # Create Output Directory and save to .csv
+# # -----------------------------
+# output_dir = OUTPUT_DIR
+# os.makedirs(output_dir, exist_ok=True)
+
+# shap_df = pd.DataFrame(shap_values, columns=[f"SHAP_{f}" for f in feature_names])
+# shap_df.insert(0, "Molecule", df_names)
+# shap_df.to_csv(f"{output_dir}/rf_shap_values.csv", index=False)
+
+# # -----------------------------
+# # SHAP Summary Plot (Beeswarm)
+# # -----------------------------
+# plt.figure()
+# shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, show=False)
+# plt.xticks(fontsize=18)
+# plt.yticks(fontsize=18)
+
+# # Fix the color bar font
+# cbar = plt.gcf().axes[-1]  # last axis is the color bar in a SHAP summary plot
+# cbar.tick_params(labelsize=18)
+
+# if len(plt.gcf().axes) > 1:
+#     right_ax = plt.gcf().axes[1]
+#     right_ax.set_ylabel("Feature value", fontsize=18)
+
+# #plt.title("SHAP Summary: RF Feature Impact on Breakdown Strength")
+# plt.tight_layout()
+# plt.xlabel("SHAP Value (Impact on model)", fontsize=18, fontweight='bold')
+# plt.savefig(f"{output_dir}/shap_summary.png", dpi=300, bbox_inches="tight")
+# plt.close()
+
+
+# # -----------------------------
+# # SHAP Bar Plot (Mean |SHAP|)
+# # -----------------------------
+# plt.figure()
+# shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, plot_type="bar", show=False)
+# #plt.title("SHAP Feature Importance (Mean |SHAP|)")
+# plt.xticks(fontsize=18)
+# plt.yticks(fontsize=18)
+# plt.tight_layout()
+# plt.xlabel("mean(|SHAP Value|)", fontsize=18, fontweight='bold')
+# plt.savefig(f"{output_dir}/shap_bar.png", dpi=300, bbox_inches="tight")
+# plt.close()
+
+# # -----------------------------
+# # Dependence Plots
+# # -----------------------------
+# for feat in feature_names:
+#     plt.figure()
+#     shap.dependence_plot(feat, shap_values, X, feature_names=feature_names, show=False)
+#     plt.title(f"SHAP Dependence: {feat}")
+#     plt.tight_layout()
+#     fname = feat.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "")
+#     plt.savefig(f"{output_dir}/shap_dependence_{fname}.png", dpi=300, bbox_inches="tight")
+#     plt.close()
 

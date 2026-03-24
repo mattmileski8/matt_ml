@@ -5,8 +5,8 @@ import numpy as np
 # Creates 
 
 # Load both prediction files
-df_rf = pd.read_csv("./results/rf_test_rmse_per_loop_7.csv")
-df_nn = pd.read_csv("./results/nn_test_rmse_per_loop_7.csv")
+df_rf = pd.read_csv("./results/rf_test_rmse_per_loop.csv")
+df_nn = pd.read_csv("./results/nn_test_rmse_per_loop.csv")
 
 # Find the minimum and maximum Test_RMSE for both models and the corresponding rows
 min_rf_test_rmse = np.min(df_rf["Test_RMSE"])
@@ -19,10 +19,16 @@ min_nn_rmse_row = df_nn.loc[df_nn["Test_RMSE"].idxmin()]
 max_rf_rmse_row = df_rf.loc[df_rf["Test_RMSE"].idxmax()]
 max_nn_rmse_row = df_nn.loc[df_nn["Test_RMSE"].idxmax()]
 
-# Find the average Test_RMSE for both models
+# Find the average Test_RMSE and R² for both models
 avg_rf_test_rmse = np.mean(df_rf["Test_RMSE"])
 avg_nn_test_rmse = np.mean(df_nn["Test_RMSE"])
+avg_rf_r2 = np.mean(df_rf["R2_Test"])
+avg_nn_r2 = np.mean(df_nn["R2_Train"])
 
+median_rf_test_rmse = np.median(df_rf["Test_RMSE"])
+median_nn_test_rmse = np.median(df_nn["Test_RMSE"])
+median_rf_r2 = np.median(df_rf["R2_Test"])
+median_nn_r2 = np.median(df_nn["R2_Train"])
 
 print("\nRF min:\n", min_rf_rmse_row)
 print("\nRF max:\n", max_rf_rmse_row)
@@ -39,3 +45,11 @@ print("\nNN closest to average:\n", closest_nn_row)
 
 print("\nRF average Test_RMSE:", avg_rf_test_rmse)
 print("NN average Test_RMSE:", avg_nn_test_rmse)
+
+print("RF average R²:", avg_rf_r2)
+print("NN average R²:", avg_nn_r2)
+
+print("\nRF median Test_RMSE:", median_rf_test_rmse)
+print("NN median Test_RMSE:", median_nn_test_rmse)
+print("RF median R²:", median_rf_r2)
+print("NN median R²:", median_nn_r2)
