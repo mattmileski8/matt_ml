@@ -40,6 +40,98 @@ from tensorflow.keras.models import load_model
 
 # print(val_5400_smooth.min())
 
+
+#----------------------------------------------------------------------------
+
+# columns = [
+#     "Molecule",
+#     "Vibrational ZPE",
+#     "Polarizability",
+#     "Dipole Moment",
+#     "Adiabatic IE",
+#     "Cohesive Energy",
+#     "Breakdown Voltage", 
+#     "Molecular Mass",
+#     "Number e-",
+#     "Molecular Volume"
+# ]
+
+# MODEL_PATH = "./models/eight_descriptors/nn_avg_model.keras"
+# SCALER_X_PATH = "./models/eight_descriptors/nn_avg_scaler_X.pkl"
+# SCALER_Y_PATH = "./models/eight_descriptors/nn_avg_scaler_y.pkl"
+# OUTPUT_DIR = "./results/shap_nn_8_descriptors_all"
+# os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+# df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
+
+# df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
+# df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
+
+# df_pred = pd.read_csv("./data/molecular_tm_data_sorted.txt", sep="\t")
+# df_pred_names = pd.read_csv("./data/molecular_tm_names_sorted.txt", sep="\t")
+
+# # ------------ Make predictions and calculate test R² and RMSE -------------
+# nn_model = load_model(MODEL_PATH)
+# X_scaler = joblib.load(SCALER_X_PATH)
+# y_scaler = joblib.load(SCALER_Y_PATH)
+
+# feature_names = columns[1:6] + columns[7:]  # 8 input features (excluding DS)
+# #feature_names = columns[2:6] + columns[7:]  # 7 input features (excluding DS, Vibrational ZPE)
+# #feature_names = columns[2:6] + columns[7:8] + columns[9:]  # 6 input features (excluding DS, Vibrational ZPE, and # e-)
+# target_col = ["Breakdown Voltage"]
+
+# X_test = df_test[feature_names].values                              # Build X from test set
+# X_test_scaled = X_scaler.transform(X_test)                          # Scale X using training scaler
+# y_true_test = df_test[target_col].values.flatten()                  # True y values from test set
+# preds_scaled_test = nn_model.predict(X_test_scaled)                      # Predict scaled target
+# preds_scaled_test = np.asarray(preds_scaled_test).reshape(-1, 1)              # Ensure preds_scaled is 2D for inverse transform
+# y_pred_test = y_scaler.inverse_transform(preds_scaled_test).flatten()    # Inverse transform to real units (rel DS)
+
+# test_RMSE = np.sqrt(np.mean((y_pred_test - y_true_test)**2))
+# test_r2 = r2_score(y_true_test, y_pred_test)
+
+# print(f"NN Test RMSE: {test_RMSE:.3f}")
+# print(f"NN Test R²: {test_r2:.3f}")
+
+# stdev_residuals_test = np.std(y_true_test - y_pred_test)
+
+# # --------------- Make predictions on training data and plot ------------------------------------
+# X_train = df[feature_names].values
+# X_train_scaled = X_scaler.transform(X_train)
+# y_true_train = df[target_col].values.flatten()
+# preds_scaled_train = nn_model.predict(X_train_scaled)
+# preds_scaled_train = np.asarray(preds_scaled_train).reshape(-1, 1)
+# y_pred_train = y_scaler.inverse_transform(preds_scaled_train).flatten()
+
+# train_RMSE = np.sqrt(np.mean((y_pred_train - y_true_train)**2))
+# train_r2 = r2_score(y_true_train, y_pred_train)
+
+# print(f"NN Train RMSE: {train_RMSE:.3f}")
+# print(f"NN Train R²: {train_r2:.3f}")
+
+# stdev_residuals_train = np.std(y_true_train - y_pred_train)
+
+# # ----------------------- Parity Plot ----------------------------------------
+# fig, ax = plt.subplots(figsize=(4, 3.2))
+
+# ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Train (R² = {train_r2:.3f}), $\\sigma$={stdev_residuals_train:.3f}')
+# #ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test data (R² = {r2:.2f})')#, RMSE = {rf_RMSE:.2f})')
+# # Plot y=x parity line
+# min_val = min(y_true_train.min(), y_pred_train.min())
+# max_val = max(y_true_train.max(), y_pred_train.max())
+# ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1)#, label='Parity line')
+
+# ax.set_xlabel('True Relative DS', fontweight='bold')
+# ax.set_ylabel('Predicted Relative DS', fontweight='bold')
+# #ax.set_title(f'Parity Plot')
+# ax.legend(fontsize=9)
+# plt.tight_layout()
+# plt.savefig("./images/nn_parity_plot_8_descriptors.png", dpi=300, bbox_inches="tight")
+
+
+
+
 #----------------------------------------------------------------------------
 # feature importance
 #----------------------------------------------------------------------------
@@ -56,19 +148,19 @@ columns = [
     "Molecular Volume"
 ]
 
-MODEL_PATH = "./models/eight_descriptors/nn_avg_model.keras"
-SCALER_X_PATH = "./models/eight_descriptors/nn_avg_scaler_X.pkl"
-SCALER_Y_PATH = "./models/eight_descriptors/nn_avg_scaler_y.pkl"
-OUTPUT_DIR = "./results/shap_nn_8_descriptors_all"
+MODEL_PATH = "./models/six_descriptors/nn_avg_model.keras"
+SCALER_X_PATH = "./models/six_descriptors/nn_avg_scaler_X.pkl"
+SCALER_Y_PATH = "./models/six_descriptors/nn_avg_scaler_y.pkl"
+OUTPUT_DIR = "./results/shap_nn_6_descriptors_all"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # -----------------------------
 # Column names (Molecule + 5 features)
 # -----------------------------
 symbolic_feature_names = [
-    r"$\varepsilon_{V}$",   # Vibrational ZPE 
+    #r"$\varepsilon_{V}$",   # Vibrational ZPE 
     r"$\alpha$",                   # Polarizability
-    r"$\mu$",                      # Dipole Moment
+    #r"$\mu$",                      # Dipole Moment
     r"$\varepsilon_{I}$",              # Adiabatic IE
     r"$\varepsilon_{c}$",            # Cohesive Energy
     r"$m$",                 # Molecular Mass
@@ -78,9 +170,9 @@ symbolic_feature_names = [
 
 
 feature_names = [
-    "Vibrational ZPE",
+    #"Vibrational ZPE",
     "Polarizability",
-    "Dipole Moment",
+    #"Dipole Moment",
     "Adiabatic IE",
     "Cohesive Energy",
     "Molecular Mass",
@@ -89,44 +181,7 @@ feature_names = [
 ]
 target_col = ["Breakdown Voltage"]
 
-# # -----------------------------
-# # Load & Parse .txt data
-# # -----------------------------
-# data = []
-# with open('./data/molecular_data.txt', "r") as file:
-#     for line in file:
-#         line = line.strip()
-#         if not line or line.startswith("Molecule"):
-#             continue
 
-#         # Molecule name (first token)
-#         match = re.match(r'^(\S+)', line)
-#         molecule = match.group(1)
-
-#         # Extract numbers
-#         values = re.findall(
-#             r'[-+]?\d*\.\d+e[+-]?\d+|[-+]?\d+\.\d+|[-+]?\d+',
-#             line[len(molecule):]
-#         )
-
-#         # Ensure 6 numeric values (5 features + breakdown strength)
-#         while len(values) < 6:
-#             values.append(None)
-#         values = values[:6]
-
-#         data.append([molecule] + values)
-
-# df = pd.DataFrame(data, columns=columns)
-
-# # Convert numeric columns
-# for col in columns[1:]:
-#     df[col] = pd.to_numeric(df[col], errors='coerce')
-
-# df = df.dropna()  # drop rows with missing numbers
-
-# pd.set_option('display.max_rows', None)
-# pd.set_option('display.max_columns', None)
-# print(len(df))
 
 # -----------------------------
 # Load model, scalers, dataset

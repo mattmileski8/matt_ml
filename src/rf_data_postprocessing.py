@@ -55,7 +55,8 @@ print(f"RF RMSE on test data: {rf_RMSE:.3f}")
 r2 = r2_score(y_true_test, y_pred_test)
 print(f"R² on test data: {r2:.3f}")
 
-
+stdev_residuals_test = np.std(y_true_test - y_pred_test)
+print(f"Standard deviation of residuals (test): {stdev_residuals_test:.3f}")
 
 # --------------- Make predictions on training data and plot ------------------------------------
 X_train = df[feature_names]
@@ -67,20 +68,21 @@ print(f"RF RMSE on training data: {rf_RMSE_train:.3f}")
 r2_train = r2_score(y_true_train, y_pred_train)
 print(f"R² on training data: {r2_train:.3f}")
 
-
+stdev_residuals_train = np.std(y_true_train - y_pred_train)
+print(f"Standard deviation of residuals (train): {stdev_residuals_train:.3f}")
 
 # ----------------------- Parity Plot ----------------------------------------
-fig, ax = plt.subplots(figsize=(4, 4))
+fig, ax = plt.subplots(figsize=(4, 3.2))
 
-ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Training data (R² = {r2_train:.3f})')#, RMSE = {rf_RMSE_train:.3f})')
-ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test data (R² = {r2:.3f})')#, RMSE = {rf_RMSE:.3f})')
+ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Train (R² = {r2_train:.3f}), $\\sigma$={stdev_residuals_train:.3f}')
+#ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test data (R² = {r2:.2f})')#, RMSE = {rf_RMSE:.2f})')
 # Plot y=x parity line
 min_val = min(y_true_train.min(), y_pred_train.min())
 max_val = max(y_true_train.max(), y_pred_train.max())
 ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1)#, label='Parity line')
 
-ax.set_xlabel('True Relative Dielectric Strength', fontweight='bold')
-ax.set_ylabel('Predicted Relative Dielectric Strength', fontweight='bold')
+ax.set_xlabel('True Relative DS', fontweight='bold')
+ax.set_ylabel('Predicted Relative DS', fontweight='bold')
 #ax.set_title(f'Parity Plot')
 ax.legend(fontsize=9)
 plt.tight_layout()

@@ -31,6 +31,15 @@ from sklearn.metrics import r2_score
 #             self.prev_lr = lr
 
 
+# find avg nn with combined_postprocessing code
+# train avg by uncommenting below in this file and filling out seed and epoch number
+# use model in nn postprocessing file
+# read shap barplot
+# decide which descriptor to drop
+# edit this code to drop that descriptor and rerun the loop to get new RMSE distribution
+
+
+
 # # #SEED = 3
 # RMSE_array = []
 # seed_array = []
@@ -75,11 +84,11 @@ from sklearn.metrics import r2_score
 #     )
 
 #     # Train+val data (90%)
-#     X_train_val = df.iloc[train_val_indices].drop(columns=["Breakdown Voltage", "Dipole Moment"])
+#     X_train_val = df.iloc[train_val_indices].drop(columns=["Breakdown Voltage", "Vibrational ZPE", "Dipole Moment"])
 #     y_train_val = df.iloc[train_val_indices]["Breakdown Voltage"]
 
 #     # Test data (10%)
-#     X_test = df.iloc[test_indices].drop(columns=["Breakdown Voltage", "Dipole Moment"])
+#     X_test = df.iloc[test_indices].drop(columns=["Breakdown Voltage", "Vibrational ZPE", "Dipole Moment"])
 #     y_test = df.iloc[test_indices]["Breakdown Voltage"]
 
 #     # --- Scale only on train+val data ---
@@ -146,7 +155,7 @@ from sklearn.metrics import r2_score
 #     #df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
 
 #     # Separate features and target
-#     X_test_external = df_test.drop(columns=["Breakdown Voltage", "Dipole Moment"])
+#     X_test_external = df_test.drop(columns=["Breakdown Voltage", "Vibrational ZPE", "Dipole Moment"])
 #     y_test_external = df_test["Breakdown Voltage"]
 
 #     # Import scalers used in training
@@ -187,8 +196,8 @@ from sklearn.metrics import r2_score
 #                         "R2_Train": r2_train_array,
 #                         "R2_External_Test": r2_external_test_array,
 #                         "Best_Epoch": best_epoch_array})
-# rmse_df.to_csv("./results/nn_test_rmse_per_loop_7.csv", index=False)
-# print("Saved test RMSE per loop to ./results/nn_test_rmse_per_loop_7.csv")
+# rmse_df.to_csv("./results/nn_test_rmse_per_loop_6.csv", index=False)
+# print("Saved test RMSE per loop to ./results/nn_test_rmse_per_loop_6.csv")
 
 
 
@@ -215,7 +224,7 @@ from sklearn.metrics import r2_score
 # ------------- Train Final Model -------------------------------------
 
 
-SEED = 115
+SEED = 127
 
 random.seed(SEED)
 np.random.seed(SEED)
@@ -250,11 +259,11 @@ train_val_indices, test_indices = train_test_split(
 )
 
 # Train+val data (90%)
-X_train_val = df.iloc[train_val_indices].drop(columns=["Breakdown Voltage"])#, "Dipole Moment"])
+X_train_val = df.iloc[train_val_indices].drop(columns=["Breakdown Voltage", "Vibrational ZPE", "Dipole Moment"])
 y_train_val = df.iloc[train_val_indices]["Breakdown Voltage"]
 
 # Test data (10%)
-X_test = df.iloc[test_indices].drop(columns=["Breakdown Voltage"])#, "Dipole Moment"])
+X_test = df.iloc[test_indices].drop(columns=["Breakdown Voltage", "Vibrational ZPE", "Dipole Moment"])
 y_test = df.iloc[test_indices]["Breakdown Voltage"]
 
 # --- Scale only on train+val data ---
@@ -292,10 +301,10 @@ model.compile(
 
 hist1 = model.fit(
     X_input, y_input,
-    epochs=48,
+    epochs=10000,
     batch_size=4,
     validation_split=0.15,  # Now ~13.5% of total data for validation
-    #callbacks=[early_stopping],#tensorboard_callback],  etc.
+    callbacks=[early_stopping],#tensorboard_callback],  etc.
     verbose=1
 )
 
@@ -306,9 +315,9 @@ y_pred = scaler_y.inverse_transform(y_pred_scaled).flatten()
 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 print(f"Final Model Test RMSE: {rmse:.4f}")
 
-model.save("./models/eight_descriptors/nn_avg_model.keras")
-joblib.dump(scaler_X, "./models/eight_descriptors/nn_avg_scaler_X.pkl")
-joblib.dump(scaler_y, "./models/eight_descriptors/nn_avg_scaler_y.pkl")
+model.save("./models/six_descriptors/nn_avg_model.keras")
+joblib.dump(scaler_X, "./models/six_descriptors/nn_avg_scaler_X.pkl")
+joblib.dump(scaler_y, "./models/six_descriptors/nn_avg_scaler_y.pkl")
 
 
 
