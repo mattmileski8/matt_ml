@@ -75,7 +75,7 @@ print(f"Standard deviation of residuals (train): {stdev_residuals_train:.3f}")
 fig, ax = plt.subplots(figsize=(4, 3.2))
 
 ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Train (R² = {r2_train:.3f}), $\\sigma$={stdev_residuals_train:.3f}')
-#ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test data (R² = {r2:.2f})')#, RMSE = {rf_RMSE:.2f})')
+ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test (R² = {r2:.3f}), $\\sigma$={stdev_residuals_test:.3f}')
 # Plot y=x parity line
 min_val = min(y_true_train.min(), y_pred_train.min())
 max_val = max(y_true_train.max(), y_pred_train.max())
@@ -83,8 +83,9 @@ ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1)#, label='Par
 
 ax.set_xlabel('True Relative DS', fontweight='bold')
 ax.set_ylabel('Predicted Relative DS', fontweight='bold')
+ax.tick_params(axis='both', labelsize=9)
 #ax.set_title(f'Parity Plot')
-ax.legend(fontsize=9)
+ax.legend(fontsize=8.6, loc='upper left')
 plt.tight_layout()
 plt.savefig("./images/rf_parity_plot_8_descriptors.png", dpi=300, bbox_inches="tight")
 
@@ -93,9 +94,9 @@ plt.savefig("./images/rf_parity_plot_8_descriptors.png", dpi=300, bbox_inches="t
 X_tm = df_pred[feature_names]
 y_pred_tm = rf_model.predict(X_tm)
 
-y_pred_tm_series = pd.Series(y_pred_tm, name='Predicted Breakdown Voltage')
+y_pred_tm_series = pd.Series(y_pred_tm, name='Predicted Dielectric Strength')
 tm_prediction_dataset = X_tm.copy()
-tm_prediction_dataset.insert(0, 'Predicted Breakdown Voltage', y_pred_tm_series)
+tm_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_tm_series)
 tm_prediction_dataset.insert(0, 'Molecule', df_pred['Molecule'])
 
 tm_prediction_dataset.to_csv('./results/rf_tm_prediction_dataset.csv', index=False)
