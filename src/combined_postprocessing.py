@@ -86,12 +86,12 @@ nn_total_pred = nn_total_pred[(nn_total_pred['Adiabatic IE'] <= 100) & (nn_total
 
 
 # rf_top5 = rf_total_pred.nlargest(5, 'Predicted Dielectric Strength')[['Molecule', 'Predicted Dielectric Strength']]
-# nn_top5 = nn_total_pred.nlargest(5, 'Predicted Dielectric Strength')[['Molecule', 'Predicted Dielectric Strength']]
+nn_top10 = nn_total_pred.nlargest(10, 'Predicted Dielectric Strength')[['Molecule', 'Predicted Dielectric Strength']]
 
 # print("RF Top 5:")
 # print(rf_top5.to_string(index=False))
-# print("\nNN Top 5:")
-# print(nn_top5.to_string(index=False))
+print("\nNN Top 10:")
+print(nn_top10.to_string(index=False))
 
 # print("\n total predictions:", len(rf_total_pred))
 
@@ -103,18 +103,19 @@ molecule_order['sort_order'] = range(len(molecule_order))
 
 nn_total_pred = molecule_order.merge(nn_total_pred, on='Molecule').sort_values('sort_order').drop(columns='sort_order').reset_index(drop=True)
 
-# print(rf_total_pred[['Molecule', 'Predicted Dielectric Strength']])
-# print(nn_total_pred[['Molecule', 'Predicted Dielectric Strength']])
+#print(rf_total_pred[['Molecule', 'Predicted Dielectric Strength']].head(10).to_string(index=False))
+#print(nn_total_pred[['Molecule', 'Predicted Dielectric Strength']].head(10).to_string(index=False))
 
+print(rf_total_pred)
 
-fig, ax = plt.subplots(figsize=(4, 3.5))
+# fig, ax = plt.subplots(figsize=(4, 3.5))
 
-ax.scatter(rf_total_pred.index, rf_total_pred['Predicted Dielectric Strength'], color='steelblue', s=10, label='RF-Predicted Values')
-ax.scatter(nn_total_pred.index, nn_total_pred['Predicted Dielectric Strength'], marker='d', color='orange', s=10, label='NN-Predicted Values')
+# ax.scatter(rf_total_pred.index, rf_total_pred['Predicted Dielectric Strength'], color='steelblue', s=10, label='RF-Predicted Values')
+# ax.scatter(nn_total_pred.index, nn_total_pred['Predicted Dielectric Strength'], marker='d', color='orange', s=10, label='NN-Predicted Values')
 
-ax.set_xlabel('Molecule Index', fontweight='bold')
-ax.set_ylabel('Predicted Relative DS', fontweight='bold')
-ax.grid(True, linestyle='--', alpha=0.5)
-ax.legend()
-plt.tight_layout()
-plt.savefig('./images/rf_nn_combined_predictions.png', dpi=300)
+# ax.set_xlabel('Molecule Index', fontweight='bold')
+# ax.set_ylabel('Predicted Relative DS', fontweight='bold')
+# ax.grid(True, linestyle='--', alpha=0.5)
+# ax.legend()
+# plt.tight_layout()
+# plt.savefig('./images/rf_nn_combined_predictions.png', dpi=300)
