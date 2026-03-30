@@ -22,8 +22,8 @@ columns = [
     "Molecular Volume"
 ]
 
-MODEL_PATH = "./models/eight_descriptors/rf_avg_model.pkl"
-OUTPUT_DIR = "./results/shap_rf_8_descriptors_all"
+MODEL_PATH = "./models/eight_2_descriptors/rf_avg_model.pkl"
+OUTPUT_DIR = "./results/shap_rf_8_2_descriptors_all"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
@@ -58,66 +58,66 @@ print(f"R² on test data: {r2:.3f}")
 stdev_residuals_test = np.std(y_true_test - y_pred_test)
 print(f"Standard deviation of residuals (test): {stdev_residuals_test:.3f}")
 
-# --------------- Make predictions on training data and plot ------------------------------------
-X_train = df[feature_names]
-y_true_train = df["Breakdown Voltage"].values
+# # --------------- Make predictions on training data and plot ------------------------------------
+# # X_train = df[feature_names]
+# # y_true_train = df["Breakdown Voltage"].values
 
-y_pred_train = rf_model.predict(X_train)
-rf_RMSE_train = np.sqrt(np.mean((y_true_train - y_pred_train) ** 2))
-print(f"RF RMSE on training data: {rf_RMSE_train:.3f}")
-r2_train = r2_score(y_true_train, y_pred_train)
-print(f"R² on training data: {r2_train:.3f}")
+# # y_pred_train = rf_model.predict(X_train)
+# # rf_RMSE_train = np.sqrt(np.mean((y_true_train - y_pred_train) ** 2))
+# # print(f"RF RMSE on training data: {rf_RMSE_train:.3f}")
+# # r2_train = r2_score(y_true_train, y_pred_train)
+# # print(f"R² on training data: {r2_train:.3f}")
 
-stdev_residuals_train = np.std(y_true_train - y_pred_train)
-print(f"Standard deviation of residuals (train): {stdev_residuals_train:.3f}")
+# # stdev_residuals_train = np.std(y_true_train - y_pred_train)
+# # print(f"Standard deviation of residuals (train): {stdev_residuals_train:.3f}")
 
-# ----------------------- Parity Plot ----------------------------------------
-fig, ax = plt.subplots(figsize=(4, 3.2))
+# # # ----------------------- Parity Plot ----------------------------------------
+# fig, ax = plt.subplots(figsize=(4, 3.2))
 
-ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Train (R² = {r2_train:.3f}), $\\sigma$={stdev_residuals_train:.3f}')
-ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test (R² = {r2:.3f}), $\\sigma$={stdev_residuals_test:.3f}')
-# Plot y=x parity line
-min_val = min(y_true_train.min(), y_pred_train.min())
-max_val = max(y_true_train.max(), y_pred_train.max())
-ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1)#, label='Parity line')
+# ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Train (R² = {r2_train:.3f}), $\\sigma$={stdev_residuals_train:.3f}')
+# ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test (R² = {r2:.3f}), $\\sigma$={stdev_residuals_test:.3f}')
+# # Plot y=x parity line
+# min_val = min(y_true_train.min(), y_pred_train.min())
+# max_val = max(y_true_train.max(), y_pred_train.max())
+# ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1)#, label='Parity line')
 
-ax.set_xlabel('True Relative DS', fontweight='bold')
-ax.set_ylabel('Predicted Relative DS', fontweight='bold')
-ax.tick_params(axis='both', labelsize=9)
-#ax.set_title(f'Parity Plot')
-ax.legend(fontsize=8.6, loc='upper left')
-plt.tight_layout()
-plt.savefig("./images/rf_parity_plot_8_descriptors.png", dpi=300, bbox_inches="tight")
+# ax.set_xlabel('True Relative DS', fontweight='bold')
+# ax.set_ylabel('Predicted Relative DS', fontweight='bold')
+# ax.tick_params(axis='both', labelsize=9)
+# #ax.set_title(f'Parity Plot')
+# ax.legend(fontsize=8.6, loc='upper left')
+# plt.tight_layout()
+# plt.savefig("./images/rf_parity_plot_8_descriptors.png", dpi=300, bbox_inches="tight")
 
 # ----------------------------Make predictions on predict data----------------------------------------------
 
-X_tm = df_pred[feature_names]
-y_pred_tm = rf_model.predict(X_tm)
+# X_tm = df_pred[feature_names]
+# y_pred_tm = rf_model.predict(X_tm)
 
-y_pred_tm_series = pd.Series(y_pred_tm, name='Predicted Dielectric Strength')
-tm_prediction_dataset = X_tm.copy()
-tm_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_tm_series)
-tm_prediction_dataset.insert(0, 'Molecule', df_pred['Molecule'])
+# y_pred_tm_series = pd.Series(y_pred_tm, name='Predicted Dielectric Strength')
+# tm_prediction_dataset = X_tm.copy()
+# tm_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_tm_series)
+# tm_prediction_dataset.insert(0, 'Molecule', df_pred['Molecule'])
 
-tm_prediction_dataset.to_csv('./results/rf_tm_prediction_dataset.csv', index=False)
+# tm_prediction_dataset.to_csv('./results/rf_tm_prediction_dataset.csv', index=False)
 
 
 
-# Save training predictions with molecule names and features to .csv for later analysis
-y_pred_train_series = pd.Series(y_pred_train, name='y_pred_train')
-train_prediction_dataset = X_train.copy()
-train_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_train_series)
-train_prediction_dataset.insert(0, 'Molecule', df['Molecule'])
+# # Save training predictions with molecule names and features to .csv for later analysis
+# y_pred_train_series = pd.Series(y_pred_train, name='y_pred_train')
+# train_prediction_dataset = X_train.copy()
+# train_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_train_series)
+# train_prediction_dataset.insert(0, 'Molecule', df['Molecule'])
 
-train_prediction_dataset.to_csv('./results/rf_train_prediction_dataset.csv', index=False)
+# train_prediction_dataset.to_csv('./results/rf_train_prediction_dataset.csv', index=False)
 
-# Save test predictions with molecule names and features to .csv for later analysis
-y_pred_test_series = pd.Series(y_pred_test, name='y_pred_test')
-test_prediction_dataset = X.copy()
-test_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_test_series)
-test_prediction_dataset.insert(0, 'Molecule', df_test['Molecule'])
+# # Save test predictions with molecule names and features to .csv for later analysis
+# y_pred_test_series = pd.Series(y_pred_test, name='y_pred_test')
+# test_prediction_dataset = X.copy()
+# test_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_test_series)
+# test_prediction_dataset.insert(0, 'Molecule', df_test['Molecule'])
 
-test_prediction_dataset.to_csv('./results/rf_test_prediction_dataset.csv', index=False)
+# test_prediction_dataset.to_csv('./results/rf_test_prediction_dataset.csv', index=False)
 
 
 
@@ -274,69 +274,12 @@ test_prediction_dataset.to_csv('./results/rf_test_prediction_dataset.csv', index
 
 
 
-#-----------------------------------------------------------------------------------
-# feature importance
-#-----------------------------------------------------------------------------------
 
+# -----------------------------
+# Load Model + Scaler
+# -----------------------------
 
-# feature_names = columns[1:-1]   # Only the 5 input features
-# target_col = columns[-1]
-
-# symbolic_feature_names = [
-#     r"$\varepsilon_{V}$",   # Vibrational ZPE 
-#     r"$\alpha$",                   # Polarizability
-#     r"$\mu$",                      # Dipole Moment
-#     r"$\varepsilon_{I}$",              # Adiabatic IE
-#     r"$\varepsilon_{c}$"            # Cohesive Energy
-# ]
-
-# # -----------------------------
-# # Load & Parse .txt data
-# # -----------------------------
-# data = []
-# with open('./data/molecular_data.txt', "r") as file:
-#     for line in file:
-#         line = line.strip()
-#         if not line or line.startswith("Molecule"):
-#             continue
-
-#         # Molecule name (first token)
-#         match = re.match(r'^(\S+)', line)
-#         molecule = match.group(1)
-
-#         # Extract numbers
-#         values = re.findall(
-#             r'[-+]?\d*\.\d+e[+-]?\d+|[-+]?\d+\.\d+|[-+]?\d+',
-#             line[len(molecule):]
-#         )
-
-#         # Ensure 6 numeric values (5 features + breakdown strength)
-#         while len(values) < 6:
-#             values.append(None)
-#         values = values[:6]
-
-#         data.append([molecule] + values)
-
-# df = pd.DataFrame(data, columns=columns)
-
-# # Convert numeric columns
-# for col in columns[1:]:
-#     df[col] = pd.to_numeric(df[col], errors='coerce')
-
-# df = df.dropna().reset_index(drop=True)  # drop rows with missing numbers
-
-
-# pd.set_option('display.max_rows', None)
-# pd.set_option('display.max_columns', None)
-# print(df)
-
-
-
-# # -----------------------------
-# # Load Model + Scaler
-# # -----------------------------
-
-# rf_model = joblib.load(MODEL_PATH)
+rf_model = joblib.load(MODEL_PATH)
 
 
 
@@ -344,104 +287,104 @@ test_prediction_dataset.to_csv('./results/rf_test_prediction_dataset.csv', index
 
 
 
-#------------------------------ SHAP Analysis -----------------------------------
+# ------------------------------ SHAP Analysis -----------------------------------
 
 
 
-# symbolic_feature_names = [
-#     r"$\varepsilon_{V}$",   # Vibrational ZPE 
-#     r"$\alpha$",                   # Polarizability
-#     r"$\mu$",                      # Dipole Moment
-#     r"$\varepsilon_{I}$",              # Adiabatic IE
-#     r"$\varepsilon_{c}$",            # Cohesive Energy
-#     r"$m$",           # Molecular Mass
-#     r"$n_{e}$",           # Number of electrons
-#     r"$V$"#,           # Molecular Volume
-#     #"DS"
-# ]
+symbolic_feature_names = [
+    r"$\varepsilon_{V}$",   # Vibrational ZPE 
+    r"$\alpha$",                   # Polarizability
+    r"$\mu$",                      # Dipole Moment
+    r"$\varepsilon_{I}$",              # Adiabatic IE
+    r"$\varepsilon_{c}$",            # Cohesive Energy
+    r"$m$",           # Molecular Mass
+    r"$n_{e}$",           # Number of electrons
+    r"$V$"#,           # Molecular Volume
+    #"DS"
+]
 
-# # Build the feature matrix (raw, because RF was trained without scaling)
-# X = df[feature_names].values
+# Build the feature matrix (raw, because RF was trained without scaling)
+X = df[feature_names].values
 
-# # -----------------------------
-# # 1. Feature Importance
-# # -----------------------------
-# importances = rf_model.feature_importances_
-# importance_df = pd.DataFrame({
-#     "Feature": feature_names,
-#     "Importance": importances
-# }).sort_values(by="Importance", ascending=False)
+# -----------------------------
+# 1. Feature Importance
+# -----------------------------
+importances = rf_model.feature_importances_
+importance_df = pd.DataFrame({
+    "Feature": feature_names,
+    "Importance": importances
+}).sort_values(by="Importance", ascending=False)
 
-# print("\n Random Forest Feature Importances:")
-# print(importance_df.to_string(index=False))
+print("\n Random Forest Feature Importances:")
+print(importance_df.to_string(index=False))
 
-# # -----------------------------
-# # 2. SHAP Analysis
-# # -----------------------------
-# explainer = shap.TreeExplainer(rf_model)
-# shap_values = explainer.shap_values(X)
+# -----------------------------
+# 2. SHAP Analysis
+# -----------------------------
+explainer = shap.TreeExplainer(rf_model)
+shap_values = explainer.shap_values(X)
 
-# # Convert to array if list
-# if isinstance(shap_values, list):
-#     shap_values = shap_values[0]
+# Convert to array if list
+if isinstance(shap_values, list):
+    shap_values = shap_values[0]
 
-# print("\n SHAP values computed successfully!\n")
+print("\n SHAP values computed successfully!\n")
 
-# # -----------------------------
-# # Create Output Directory and save to .csv
-# # -----------------------------
-# output_dir = OUTPUT_DIR
-# os.makedirs(output_dir, exist_ok=True)
+# -----------------------------
+# Create Output Directory and save to .csv
+# -----------------------------
+output_dir = OUTPUT_DIR
+os.makedirs(output_dir, exist_ok=True)
 
-# shap_df = pd.DataFrame(shap_values, columns=[f"SHAP_{f}" for f in feature_names])
-# shap_df.insert(0, "Molecule", df_names)
-# shap_df.to_csv(f"{output_dir}/rf_shap_values.csv", index=False)
+shap_df = pd.DataFrame(shap_values, columns=[f"SHAP_{f}" for f in feature_names])
+shap_df.insert(0, "Molecule", df_names)
+shap_df.to_csv(f"{output_dir}/rf_shap_values.csv", index=False)
 
-# # -----------------------------
-# # SHAP Summary Plot (Beeswarm)
-# # -----------------------------
-# plt.figure()
-# shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, show=False)
-# plt.xticks(fontsize=18)
-# plt.yticks(fontsize=18)
+# -----------------------------
+# SHAP Summary Plot (Beeswarm)
+# -----------------------------
+plt.figure()
+shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, show=False)
+plt.xticks(fontsize=18)
+plt.yticks(fontsize=18)
 
-# # Fix the color bar font
-# cbar = plt.gcf().axes[-1]  # last axis is the color bar in a SHAP summary plot
-# cbar.tick_params(labelsize=18)
+# Fix the color bar font
+cbar = plt.gcf().axes[-1]  # last axis is the color bar in a SHAP summary plot
+cbar.tick_params(labelsize=18)
 
-# if len(plt.gcf().axes) > 1:
-#     right_ax = plt.gcf().axes[1]
-#     right_ax.set_ylabel("Feature value", fontsize=18)
+if len(plt.gcf().axes) > 1:
+    right_ax = plt.gcf().axes[1]
+    right_ax.set_ylabel("Feature value", fontsize=18)
 
-# #plt.title("SHAP Summary: RF Feature Impact on Breakdown Strength")
-# plt.tight_layout()
-# plt.xlabel("SHAP Value (Impact on model)", fontsize=18, fontweight='bold')
-# plt.savefig(f"{output_dir}/shap_summary.png", dpi=300, bbox_inches="tight")
-# plt.close()
+#plt.title("SHAP Summary: RF Feature Impact on Breakdown Strength")
+plt.tight_layout()
+plt.xlabel("SHAP Value (Impact on model)", fontsize=18, fontweight='bold')
+plt.savefig(f"{output_dir}/shap_summary.png", dpi=300, bbox_inches="tight")
+plt.close()
 
 
-# # -----------------------------
-# # SHAP Bar Plot (Mean |SHAP|)
-# # -----------------------------
-# plt.figure()
-# shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, plot_type="bar", show=False)
-# #plt.title("SHAP Feature Importance (Mean |SHAP|)")
-# plt.xticks(fontsize=18)
-# plt.yticks(fontsize=18)
-# plt.tight_layout()
-# plt.xlabel("mean(|SHAP Value|)", fontsize=18, fontweight='bold')
-# plt.savefig(f"{output_dir}/shap_bar.png", dpi=300, bbox_inches="tight")
-# plt.close()
+# -----------------------------
+# SHAP Bar Plot (Mean |SHAP|)
+# -----------------------------
+plt.figure()
+shap.summary_plot(shap_values, X, feature_names=symbolic_feature_names, plot_type="bar", show=False)
+#plt.title("SHAP Feature Importance (Mean |SHAP|)")
+plt.xticks(fontsize=18)
+plt.yticks(fontsize=18)
+plt.tight_layout()
+plt.xlabel("mean(|SHAP Value|)", fontsize=18, fontweight='bold')
+plt.savefig(f"{output_dir}/shap_bar.png", dpi=300, bbox_inches="tight")
+plt.close()
 
-# # -----------------------------
-# # Dependence Plots
-# # -----------------------------
-# for feat in feature_names:
-#     plt.figure()
-#     shap.dependence_plot(feat, shap_values, X, feature_names=feature_names, show=False)
-#     plt.title(f"SHAP Dependence: {feat}")
-#     plt.tight_layout()
-#     fname = feat.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "")
-#     plt.savefig(f"{output_dir}/shap_dependence_{fname}.png", dpi=300, bbox_inches="tight")
-#     plt.close()
+# -----------------------------
+# Dependence Plots
+# -----------------------------
+for feat in feature_names:
+    plt.figure()
+    shap.dependence_plot(feat, shap_values, X, feature_names=feature_names, show=False)
+    plt.title(f"SHAP Dependence: {feat}")
+    plt.tight_layout()
+    fname = feat.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "")
+    plt.savefig(f"{output_dir}/shap_dependence_{fname}.png", dpi=300, bbox_inches="tight")
+    plt.close()
 

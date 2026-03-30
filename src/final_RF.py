@@ -37,11 +37,11 @@ columns = [
 ]
 
 # Load the dataframe saved from preprocessing
-df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
-df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
+df = pd.read_csv("./data/molecular_data_sorted_2.txt", sep="\t")
+df_names = pd.read_csv("./data/molecular_names_sorted_2.txt", sep="\t")
 
 
-# ------------- Predictability Analysis ----------------------------------
+# # ------------- Predictability Analysis ----------------------------------
 
 # for i in range(150):
 #     seed = i
@@ -49,8 +49,8 @@ df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 #     #----------Train initial model
 #     data_train, data_test = train_test_split(df, test_size=0.1, random_state=seed)
 
-#     X_train = data_train.drop(columns=['Breakdown Voltage', 'Vibrational ZPE', 'Number e-'])
-#     X_test = data_test.drop(columns=['Breakdown Voltage', 'Vibrational ZPE', 'Number e-'])
+#     X_train = data_train.drop(columns=['Breakdown Voltage'])#, 'Vibrational ZPE', 'Number e-'])
+#     X_test = data_test.drop(columns=['Breakdown Voltage'])#, 'Vibrational ZPE', 'Number e-'])
 
 #     y_train = data_train[['Breakdown Voltage']]
 #     y_test = data_test[['Breakdown Voltage']]
@@ -100,7 +100,7 @@ df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 #     oob_rmse_array.append(oob_rmse)
 
 #     # Compute R² for training set
-#     X_train_r2 = np.array(df.drop(columns=['Breakdown Voltage', 'Vibrational ZPE', 'Number e-']))
+#     X_train_r2 = np.array(df.drop(columns=['Breakdown Voltage']))#, 'Vibrational ZPE', 'Number e-']))
 #     y_train_r2 = np.array(df[['Breakdown Voltage']])
 #     y_r2_pred = rf.predict(X_train_r2)
 
@@ -111,8 +111,8 @@ df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 #     r2_train_array.append(r2_train)
 
 # rmse_df = pd.DataFrame({"Seed": seed_array, "Test_RMSE": test_rmse_array, "OOB_RMSE": oob_rmse_array, "R2_Train": r2_train_array, "R2_Test": r2_test_array})
-# rmse_df.to_csv("./results/rf_test_rmse_per_loop_6.csv", index=False)
-# print("Saved test RMSE per loop to ./results/rf_test_rmse_per_loop_6.csv")
+# rmse_df.to_csv("./results/rf_test_rmse_per_loop_8_2.csv", index=False)
+# print("Saved test RMSE per loop to ./results/rf_test_rmse_per_loop_8_2.csv")
     
 
 
@@ -129,13 +129,13 @@ df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
 # ------------ Train Final Model on 100% of Data? ----------------
 
-seed = 137
+seed = 138
 
 # #----------Train initial model
 data_train, data_test = train_test_split(df, test_size=0.1, random_state=seed)
 
-X_train = data_train.drop(columns=['Breakdown Voltage', 'Vibrational ZPE', 'Number e-'])
-X_test = data_test.drop(columns=['Breakdown Voltage', 'Vibrational ZPE', 'Number e-'])
+X_train = data_train.drop(columns=['Breakdown Voltage'])#, 'Vibrational ZPE', 'Number e-'])
+X_test = data_test.drop(columns=['Breakdown Voltage'])#, 'Vibrational ZPE', 'Number e-'])
 
 y_train = data_train[['Breakdown Voltage']]
 y_test = data_test[['Breakdown Voltage']]
@@ -180,7 +180,7 @@ test_rmse = np.sqrt(mean_squared_error(y_test_input, y_test_pred))
 print("Test RMSE:", test_rmse)
 
 # Save the model to the results folder
-joblib.dump(rf, "./models/six_descriptors/rf_min_model.pkl")
+joblib.dump(rf, "./models/eight_2_descriptors/rf_avg_model.pkl")
 
 
 
