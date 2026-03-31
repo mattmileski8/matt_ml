@@ -22,12 +22,15 @@ columns = [
     "Molecular Volume"
 ]
 
-MODEL_PATH = "./models/eight_2_descriptors/rf_avg_model.pkl"
-OUTPUT_DIR = "./results/shap_rf_8_2_descriptors_all"
+MODEL_PATH = "./models/seven_2_descriptors/rf_avg_model.pkl"
+OUTPUT_DIR = "./results/shap_rf_7_2_descriptors_all"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
-df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
+# df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+# df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
+
+df = pd.read_csv("./data/molecular_data_sorted_2.txt", sep="\t")
+df_names = pd.read_csv("./data/molecular_names_sorted_2.txt", sep="\t")
 
 df_test = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
 df_test_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
@@ -43,7 +46,8 @@ df_pred = pd.concat([df_pred_names, df_pred], axis=1)
 
 # ------------ Make predictions and calculate test R² and RMSE -------------
 rf_model = joblib.load(MODEL_PATH)
-feature_names = columns[1:6] + columns[7:]  # 8 input features (excluding DS)
+#feature_names = columns[1:6] + columns[7:]  # 8 input features (excluding DS)
+feature_names = columns[1:6] + columns[7:8] + columns[9:]  # 7 input features (excluding DS and Number e-)
 #feature_names = columns[2:6] + columns[7:]  # 7 input features (excluding DS, Vibrational ZPE)
 #feature_names = columns[2:6] + columns[7:8] + columns[9:]  # 6 input features (excluding DS, Vibrational ZPE, and # e-)
 X = df_test[feature_names]

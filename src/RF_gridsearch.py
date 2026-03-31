@@ -35,7 +35,7 @@ def objective(trial):
         bootstrap=True
     )
 
-    # 10-fold CV
+    # 5-fold CV
     kf = KFold(n_splits=5, shuffle=True, random_state=42)
     scores = cross_val_score(
         rf,
@@ -69,8 +69,8 @@ columns = [
 ]
 
 # Load the dataframe saved from preprocessing
-df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
-df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
+df = pd.read_csv("./data/molecular_data_sorted_2.txt", sep="\t")
+df_names = pd.read_csv("./data/molecular_names_sorted_2.txt", sep="\t")
 
 
 
@@ -127,8 +127,8 @@ test_rmse = np.sqrt(mean_squared_error(y_test_input, y_pred))
 test_r2 = r2_score(y_test_input, y_pred)
 
 rf_trials = study.trials_dataframe()
-rf_trials.to_csv("./logs/optuna_rf_trials.csv", index=False)
+rf_trials.to_csv("./logs/optuna_rf_trials_2.csv", index=False)
 
 
-print(f"Test RMSE: {test_rmse:.3f}")
-print(f"Test R2: {test_r2:.3f}")
+# print(f"Test RMSE: {test_rmse:.3f}")
+# print(f"Test R2: {test_r2:.3f}")

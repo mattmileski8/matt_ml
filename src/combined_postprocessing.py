@@ -4,7 +4,7 @@ import numpy as np
 
 # -----------------Evaluates the results of the RF and NN models -------------------------------------
 # Load both prediction files
-df_rf = pd.read_csv("./results/rf_test_rmse_per_loop_8_2.csv")
+df_rf = pd.read_csv("./results/rf_test_rmse_per_loop_6_2.csv")
 df_nn = pd.read_csv("./results/nn_test_rmse_per_loop.csv")
 
 # Find the minimum and maximum Test_RMSE for both models and the corresponding rows
