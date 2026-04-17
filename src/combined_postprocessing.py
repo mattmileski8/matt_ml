@@ -127,6 +127,22 @@ print(rf_total_pred)
 
 
 
+
+
+# numeric_cols = rf_total_pred.select_dtypes(include=[np.number]).columns
+# pairs = []
+# for i in range(len(rf_total_pred)):
+#     for j in range(i + 1, len(rf_total_pred)):
+#         a = rf_total_pred.loc[i, numeric_cols]
+#         b = rf_total_pred.loc[j, numeric_cols]
+#         if ((a - b).abs() / b.abs() <= 0.01).all():
+#             pairs.append((rf_total_pred.loc[i, 'Molecule'], rf_total_pred.loc[j, 'Molecule']))
+
+# print(pairs)
+
+molecules_to_drop = ['C3F6O', 'C3F7NO', 'C2F4N2H2', 'CF3S_O_F', 'CH2_CHCH2F', 'ONBr', 'CH3Cl']
+rf_total_pred = rf_total_pred[~rf_total_pred['Molecule'].isin(molecules_to_drop)].reset_index(drop=True)
+
 # ---------------------------- Save rf predictions in a new text file in latex table format -------------------------------------
 import re
 
