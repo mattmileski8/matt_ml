@@ -82,8 +82,8 @@ nn_total_pred = nn_total_pred[(nn_total_pred['Adiabatic IE'] <= 100) & (nn_total
 rf_total_pred = rf_total_pred.sort_values('Predicted Dielectric Strength', ascending=False).reset_index(drop=True)
 rf_total_pred = rf_total_pred.reset_index(drop=True)
 nn_total_pred = nn_total_pred.reset_index(drop=True)
-rf_total_pred.to_csv("./results/rf_total_prediction_dataset.csv", index=True)
-nn_total_pred.to_csv("./results/nn_total_prediction_dataset.csv", index=True)
+# rf_total_pred.to_csv("./results/rf_total_prediction_dataset.csv", index=True)
+# nn_total_pred.to_csv("./results/nn_total_prediction_dataset.csv", index=True)
 
 
 #print(rf_total_pred[rf_total_pred['Adiabatic IE'] > 100][['Molecule', 'Adiabatic IE']]) #Check for any molecules with very high Adiabatic IE values that might be outliers
@@ -111,37 +111,47 @@ nn_total_pred = molecule_order.merge(nn_total_pred, on='Molecule').sort_values('
 
 print(rf_total_pred)
 
-fig, ax = plt.subplots(figsize=(4, 3.5))
+# ------------------------------ Plot the predicted dielectric strength values from both models -------------------------------------
 
-ax.scatter(rf_total_pred.index, rf_total_pred['Predicted Dielectric Strength'], color='steelblue', s=10, label='RF-Predicted Values')
-ax.scatter(nn_total_pred.index, nn_total_pred['Predicted Dielectric Strength'], marker='x', color='orange', s=8, label='NN-Predicted Values')
+# fig, ax = plt.subplots(figsize=(4, 3.5))
 
-ax.set_xlabel('Molecule Index', fontweight='bold')
-ax.set_ylabel('Predicted Relative DS', fontweight='bold')
-ax.grid(True, linestyle='--', alpha=0.5)
-ax.legend()
-plt.tight_layout()
-plt.savefig('./images/rf_nn_combined_predictions.png', dpi=300)
+# ax.scatter(rf_total_pred.index, rf_total_pred['Predicted Dielectric Strength'], color='steelblue', s=10, label='RF-Predicted Values')
+# ax.scatter(nn_total_pred.index, nn_total_pred['Predicted Dielectric Strength'], marker='x', color='orange', s=8, label='NN-Predicted Values')
+
+# ax.set_xlabel('Molecule Index', fontweight='bold')
+# ax.set_ylabel('Predicted Relative DS', fontweight='bold')
+# ax.grid(True, linestyle='--', alpha=0.5)
+# ax.legend()
+# plt.tight_layout()
+# plt.savefig('./images/rf_nn_combined_predictions.png', dpi=300)
 
 
 
 # ---------------------------- Save rf predictions in a new text file in latex table format -------------------------------------
+import re
 
+def format_molecule_name(name):
+    return re.sub(r'(\d+)', r'$_{\1}$', str(name))
 
-# with open('./results/prediction_latex_table.txt', 'w') as f:
-#     for idx, row in rf_total_pred.iterrows():
-#         values = [idx + 1] + list(row.values)
-#         formatted = []
-#         for i, val in enumerate(values):
-#             if i in [3, 7]:                # Vibrational ZPE, Cohesive Energy — scientific notation
-#                 formatted.append(f'{float(val):.2e}')
-#             elif i in [2, 4, 5, 6, 10]:   # 2 decimal places
-#                 formatted.append(f'{float(val):.2f}')
-#             elif i in [8, 9]:              # rounded to whole number
-#                 formatted.append(f'{round(float(val))}')
-#             elif isinstance(val, float):
-#                 formatted.append(str(round(val, 3)))
-#             else:
-#                 formatted.append(str(val))
-#         line = ' & '.join(formatted)
-#         f.write(line + ' \\\\\n')
+with open('./results/prediction_latex_table.txt', 'w') as f:
+    for idx, row in rf_total_pred.iterrows():
+        values = [idx + 1] + list(row.values)
+        values.insert(2, '')                       # Insert blank column at index 2
+        formatted = []
+        for i, val in enumerate(values):
+            if i == 1:                             # Molecule name — subscript numbers
+                formatted.append(format_molecule_name(val))
+            elif i == 2:                           # Blank column
+                formatted.append('')
+            elif i in [4, 8]:                      # Vibrational ZPE, Cohesive Energy — scientific notation (was 3, 7)
+                formatted.append(f'{float(val):.2e}')
+            elif i in [3, 5, 6, 7, 11]:            # 2 decimal places (was 2, 4, 5, 6, 10)
+                formatted.append(f'{float(val):.2f}')
+            elif i in [9, 10]:                     # rounded to whole number (was 8, 9)
+                formatted.append(f'{round(float(val))}')
+            elif isinstance(val, float):
+                formatted.append(str(round(val, 3)))
+            else:
+                formatted.append(str(val))
+        line = ' & '.join(formatted)
+        f.write(line + ' \\\\\n')
