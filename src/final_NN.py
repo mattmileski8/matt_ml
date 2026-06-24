@@ -315,9 +315,9 @@ y_pred = scaler_y.inverse_transform(y_pred_scaled).flatten()
 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 print(f"Final Model Test RMSE: {rmse:.4f}")
 
-model.save("./models/six_descriptors/nn_avg_model.keras")
-joblib.dump(scaler_X, "./models/six_descriptors/nn_avg_scaler_X.pkl")
-joblib.dump(scaler_y, "./models/six_descriptors/nn_avg_scaler_y.pkl")
+# model.save("./models/six_descriptors/nn_avg_model.keras")
+# joblib.dump(scaler_X, "./models/six_descriptors/nn_avg_scaler_X.pkl")
+# joblib.dump(scaler_y, "./models/six_descriptors/nn_avg_scaler_y.pkl")
 
 
 
