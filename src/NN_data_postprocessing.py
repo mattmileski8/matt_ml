@@ -3,12 +3,13 @@ import re
 import joblib
 import numpy as np
 import pandas as pd
-import shap
+#import shap
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 import tensorflow as tf
 from tensorflow.keras.models import load_model
+from itertools import permutations
 
 
 # -------Plot validation and training mae-----------------------------------
@@ -96,73 +97,103 @@ print(f"NN Test R²: {test_r2:.3f}")
 
 stdev_residuals_test = np.std(y_true_test - y_pred_test)
 
-# --------------- Make predictions on training data and plot ------------------------------------
-X_train = df[feature_names].values
-X_train_scaled = X_scaler.transform(X_train)
-y_true_train = df[target_col].values.flatten()
-preds_scaled_train = nn_model.predict(X_train_scaled)
-preds_scaled_train = np.asarray(preds_scaled_train).reshape(-1, 1)
-y_pred_train = y_scaler.inverse_transform(preds_scaled_train).flatten()
-
-train_RMSE = np.sqrt(np.mean((y_pred_train - y_true_train)**2))
-train_r2 = r2_score(y_true_train, y_pred_train)
-
-print(f"NN Train RMSE: {train_RMSE:.3f}")
-print(f"NN Train R²: {train_r2:.3f}")
-
-stdev_residuals_train = np.std(y_true_train - y_pred_train)
-
-# ----------------------- Parity Plot ----------------------------------------
-fig, ax = plt.subplots(figsize=(4, 3.2))
-
-ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Train (R² = {train_r2:.3f}), $\\sigma$={stdev_residuals_train:.3f}')
-ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test (R² = {test_r2:.3f}), $\\sigma$={stdev_residuals_test:.3f}')
-# Plot y=x parity line
-min_val = min(y_true_train.min(), y_pred_train.min())
-max_val = max(y_true_train.max(), y_pred_train.max())
-ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1)#, label='Parity line')
-
-ax.set_xlabel('True Relative DS', fontweight='bold')
-ax.set_ylabel('Predicted Relative DS', fontweight='bold')
-ax.tick_params(axis='both', labelsize=9)
-#ax.set_title(f'Parity Plot')
-ax.legend(fontsize=8.6)
-plt.tight_layout()
-plt.savefig("./images/nn_parity_plot_8_descriptors.png", dpi=300, bbox_inches="tight")
 
 
+# ------------ Exact Permutation Test on Test Set -------------
+def r_squared(y_true, y_pred):
+    ss_res = np.sum((y_true - y_pred) ** 2)
+    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+    return 1 - (ss_res / ss_tot)
 
-# ----------------------------Make predictions on predict data----------------------------------------------
-X_tm = df_pred[feature_names].values
-X_tm_scaled = X_scaler.transform(X_tm)
-y_pred_tm = nn_model.predict(X_tm_scaled)
-y_pred_tm = np.asarray(y_pred_tm).reshape(-1, 1)
-y_pred_tm = y_scaler.inverse_transform(y_pred_tm).flatten()
+real_r2 = float(test_r2)
+real_rmse = float(test_RMSE)
 
-y_pred_tm_series = pd.Series(y_pred_tm, name='Predicted Dielectric Strength')
-tm_prediction_dataset = pd.DataFrame(X_tm, columns=feature_names)
-tm_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_tm_series)
-tm_prediction_dataset.insert(0, 'Molecule', df_pred_names['Molecule'])
+null_r2_dist = []
+null_rmse_dist = []
 
-tm_prediction_dataset.to_csv('./results/nn_tm_prediction_dataset.csv', index=False)
+for perm in permutations(y_true_test):
+    perm_array = np.array(perm)
+    null_r2_dist.append(r_squared(perm_array, y_pred_test))
+    null_rmse_dist.append(np.sqrt(np.mean((perm_array - y_pred_test) ** 2)))
+
+null_r2_dist = np.array(null_r2_dist)
+null_rmse_dist = np.array(null_rmse_dist)
+
+p_value_r2 = np.mean(null_r2_dist >= real_r2)
+p_value_rmse = np.mean(null_rmse_dist <= real_rmse)
+
+print(f"\nExact Permutation Test (n=5040 permutations):")
+print(f"Real R²: {real_r2:.4f}, p-value: {p_value_r2:.4f}")
+print(f"Real RMSE: {real_rmse:.4f}, p-value: {p_value_rmse:.4f}")
+
+
+# # --------------- Make predictions on training data and plot ------------------------------------
+# X_train = df[feature_names].values
+# X_train_scaled = X_scaler.transform(X_train)
+# y_true_train = df[target_col].values.flatten()
+# preds_scaled_train = nn_model.predict(X_train_scaled)
+# preds_scaled_train = np.asarray(preds_scaled_train).reshape(-1, 1)
+# y_pred_train = y_scaler.inverse_transform(preds_scaled_train).flatten()
+
+# train_RMSE = np.sqrt(np.mean((y_pred_train - y_true_train)**2))
+# train_r2 = r2_score(y_true_train, y_pred_train)
+
+# print(f"NN Train RMSE: {train_RMSE:.3f}")
+# print(f"NN Train R²: {train_r2:.3f}")
+
+# stdev_residuals_train = np.std(y_true_train - y_pred_train)
+
+# # ----------------------- Parity Plot ----------------------------------------
+# fig, ax = plt.subplots(figsize=(4, 3.2))
+
+# ax.scatter(y_true_train, y_pred_train,  color='steelblue', edgecolors='k', alpha=0.7, label=f'Train (R² = {train_r2:.3f}), $\\sigma$={stdev_residuals_train:.3f}')
+# ax.scatter(y_true_test, y_pred_test, marker='s', color='orange', edgecolors='k', alpha=0.7, label=f'Test (R² = {test_r2:.3f}), $\\sigma$={stdev_residuals_test:.3f}')
+# # Plot y=x parity line
+# min_val = min(y_true_train.min(), y_pred_train.min())
+# max_val = max(y_true_train.max(), y_pred_train.max())
+# ax.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=1)#, label='Parity line')
+
+# ax.set_xlabel('True Relative DS', fontweight='bold')
+# ax.set_ylabel('Predicted Relative DS', fontweight='bold')
+# ax.tick_params(axis='both', labelsize=9)
+# #ax.set_title(f'Parity Plot')
+# ax.legend(fontsize=8.6)
+# plt.tight_layout()
+# plt.savefig("./images/nn_parity_plot_8_descriptors.png", dpi=300, bbox_inches="tight")
 
 
 
-# Save training predictions with molecule names and features to .csv for later analysis
-y_pred_train_series = pd.Series(y_pred_train, name='y_pred_train')
-train_prediction_dataset = pd.DataFrame(X_train, columns=feature_names)
-train_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_train_series)
-train_prediction_dataset.insert(0, 'Molecule', df_names['Molecule'])
+# # ----------------------------Make predictions on predict data----------------------------------------------
+# X_tm = df_pred[feature_names].values
+# X_tm_scaled = X_scaler.transform(X_tm)
+# y_pred_tm = nn_model.predict(X_tm_scaled)
+# y_pred_tm = np.asarray(y_pred_tm).reshape(-1, 1)
+# y_pred_tm = y_scaler.inverse_transform(y_pred_tm).flatten()
 
-train_prediction_dataset.to_csv('./results/nn_train_prediction_dataset.csv', index=False)
+# y_pred_tm_series = pd.Series(y_pred_tm, name='Predicted Dielectric Strength')
+# tm_prediction_dataset = pd.DataFrame(X_tm, columns=feature_names)
+# tm_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_tm_series)
+# tm_prediction_dataset.insert(0, 'Molecule', df_pred_names['Molecule'])
 
-# Save test predictions with molecule names and features to .csv for later analysis
-y_pred_test_series = pd.Series(y_pred_test, name='y_pred_test')
-test_prediction_dataset = pd.DataFrame(X_test, columns=feature_names)
-test_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_test_series)
-test_prediction_dataset.insert(0, 'Molecule', df_test_names['Molecule'])
+# tm_prediction_dataset.to_csv('./results/nn_tm_prediction_dataset.csv', index=False)
 
-test_prediction_dataset.to_csv('./results/nn_test_prediction_dataset.csv', index=False)
+
+
+# # Save training predictions with molecule names and features to .csv for later analysis
+# y_pred_train_series = pd.Series(y_pred_train, name='y_pred_train')
+# train_prediction_dataset = pd.DataFrame(X_train, columns=feature_names)
+# train_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_train_series)
+# train_prediction_dataset.insert(0, 'Molecule', df_names['Molecule'])
+
+# train_prediction_dataset.to_csv('./results/nn_train_prediction_dataset.csv', index=False)
+
+# # Save test predictions with molecule names and features to .csv for later analysis
+# y_pred_test_series = pd.Series(y_pred_test, name='y_pred_test')
+# test_prediction_dataset = pd.DataFrame(X_test, columns=feature_names)
+# test_prediction_dataset.insert(0, 'Predicted Dielectric Strength', y_pred_test_series)
+# test_prediction_dataset.insert(0, 'Molecule', df_test_names['Molecule'])
+
+# test_prediction_dataset.to_csv('./results/nn_test_prediction_dataset.csv', index=False)
 
 
 

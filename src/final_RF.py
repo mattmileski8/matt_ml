@@ -37,8 +37,8 @@ columns = [
 ]
 
 # Load the dataframe saved from preprocessing
-df = pd.read_csv("./data/molecular_data_sorted_2.txt", sep="\t")
-df_names = pd.read_csv("./data/molecular_names_sorted_2.txt", sep="\t")
+df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
 
 # ------------- Predictability Analysis ----------------------------------
@@ -49,8 +49,8 @@ for i in range(150):
     #----------Train initial model
     data_train, data_test = train_test_split(df, test_size=0.1, random_state=seed)
 
-    X_train = data_train.drop(columns=['Breakdown Voltage', 'Number e-', 'Vibrational ZPE'])#, 'Vibrational ZPE', 'Number e-'])
-    X_test = data_test.drop(columns=['Breakdown Voltage', 'Number e-', 'Vibrational ZPE'])#, 'Vibrational ZPE', 'Number e-'])
+    X_train = data_train.drop(columns=['Breakdown Voltage'])#, 'Number e-', 'Vibrational ZPE'])#, 'Vibrational ZPE', 'Number e-'])
+    X_test = data_test.drop(columns=['Breakdown Voltage'])#, 'Number e-', 'Vibrational ZPE'])#, 'Vibrational ZPE', 'Number e-'])
 
     y_train = data_train[['Breakdown Voltage']]
     y_test = data_test[['Breakdown Voltage']]
@@ -100,7 +100,7 @@ for i in range(150):
     oob_rmse_array.append(oob_rmse)
 
     # Compute R² for training set
-    X_train_r2 = np.array(df.drop(columns=['Breakdown Voltage', 'Number e-', 'Vibrational ZPE']))#, 'Vibrational ZPE', 'Number e-']))
+    X_train_r2 = np.array(df.drop(columns=['Breakdown Voltage']))#, 'Number e-', 'Vibrational ZPE']))#, 'Vibrational ZPE', 'Number e-']))
     y_train_r2 = np.array(df[['Breakdown Voltage']])
     y_r2_pred = rf.predict(X_train_r2)
 
@@ -111,16 +111,17 @@ for i in range(150):
     r2_train_array.append(r2_train)
 
 rmse_df = pd.DataFrame({"Seed": seed_array, "Test_RMSE": test_rmse_array, "OOB_RMSE": oob_rmse_array, "R2_Train": r2_train_array, "R2_Test": r2_test_array})
-rmse_df.to_csv("./results/rf_test_rmse_per_loop_6_2.csv", index=False)
-print("Saved test RMSE per loop to ./results/rf_test_rmse_per_loop_6_2.csv")
+# rmse_df.to_csv("./results/rf_test_rmse_per_loop_small_2.csv", index=False)
+# print("Saved test RMSE per loop to ./results/rf_test_rmse_per_loop_small_2.csv")
     
 
 
 
 
-# print(np.mean(oob_rmse_array))
-# print(np.mean(test_rmse_array))
+print(np.mean(oob_rmse_array))
+print(np.mean(test_rmse_array))
 
+print(np.median(r2_test_array))
 
 # Convert to original units
 # oob_rmse = oob_rmse_std * scaler_label.scale_[0]
