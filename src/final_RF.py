@@ -14,114 +14,114 @@ from scipy.stats import linregress
 from sklearn.model_selection import KFold, cross_val_score
 from sklearn.metrics import make_scorer
 
-seed_array = []
-oob_rmse_array = []
-test_rmse_array = []
-#external_rmse_array = []
-r2_train_array = []
-r2_test_array = []
-#r2_external_test_array = []
+# seed_array = []
+# oob_rmse_array = []
+# test_rmse_array = []
+# #external_rmse_array = []
+# r2_train_array = []
+# r2_test_array = []
+# #r2_external_test_array = []
 
-# Define the column names based on the header
-columns = [
-    "Molecule",
-    "Vibrational ZPE",
-    "Polarizability",
-    "Dipole Moment",
-    "Adiabatic IE",
-    "Cohesive Energy",
-    "Breakdown Voltage", 
-    "Molecular Mass",
-    "Number e-",
-    "Molecular Volume"
-]
+# # Define the column names based on the header
+# columns = [
+#     "Molecule",
+#     "Vibrational ZPE",
+#     "Polarizability",
+#     "Dipole Moment",
+#     "Adiabatic IE",
+#     "Cohesive Energy",
+#     "Breakdown Voltage", 
+#     "Molecular Mass",
+#     "Number e-",
+#     "Molecular Volume"
+# ]
 
-# Load the dataframe saved from preprocessing
-df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
-df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
+# # Load the dataframe saved from preprocessing
+# df = pd.read_csv("./data/molecular_data_sorted.txt", sep="\t")
+# df_names = pd.read_csv("./data/molecular_names_sorted.txt", sep="\t")
 
 
 # ------------- Predictability Analysis ----------------------------------
 
-for i in range(150):
-    seed = i
+# for i in range(150):
+#     seed = i
 
-    #----------Train initial model
-    data_train, data_test = train_test_split(df, test_size=0.1, random_state=seed)
+#     #----------Train initial model
+#     data_train, data_test = train_test_split(df, test_size=0.1, random_state=seed)
 
-    X_train = data_train.drop(columns=['Breakdown Voltage'])#, 'Number e-', 'Vibrational ZPE'])#, 'Vibrational ZPE', 'Number e-'])
-    X_test = data_test.drop(columns=['Breakdown Voltage'])#, 'Number e-', 'Vibrational ZPE'])#, 'Vibrational ZPE', 'Number e-'])
+#     X_train = data_train.drop(columns=['Breakdown Voltage'])#, 'Number e-', 'Vibrational ZPE'])#, 'Vibrational ZPE', 'Number e-'])
+#     X_test = data_test.drop(columns=['Breakdown Voltage'])#, 'Number e-', 'Vibrational ZPE'])#, 'Vibrational ZPE', 'Number e-'])
 
-    y_train = data_train[['Breakdown Voltage']]
-    y_test = data_test[['Breakdown Voltage']]
+#     y_train = data_train[['Breakdown Voltage']]
+#     y_test = data_test[['Breakdown Voltage']]
 
 
-    # Convert to np arrays
-    X_train_input = np.array(X_train)
-    X_test_input = np.array(X_test)
-    y_train_input = np.array(y_train)
-    y_test_input = np.array(y_test)
+#     # Convert to np arrays
+#     X_train_input = np.array(X_train)
+#     X_test_input = np.array(X_test)
+#     y_train_input = np.array(y_train)
+#     y_test_input = np.array(y_test)
 
-    # Flatten input for BaggingRegressor
-    y_train_input = y_train_input.ravel()
-    y_test_input = y_test_input.ravel()
+#     # Flatten input for BaggingRegressor
+#     y_train_input = y_train_input.ravel()
+#     y_test_input = y_test_input.ravel()
 
-    n_estimators = 9691
-    max_depth = 33
-    min_split = 2
-    min_leaf = 1
+#     n_estimators = 9691
+#     max_depth = 33
+#     min_split = 2
+#     min_leaf = 1
 
-    rf = RandomForestRegressor(
-        n_estimators=n_estimators,
-        max_depth=max_depth,
-        min_samples_split=min_split,
-        min_samples_leaf=min_leaf,
-        random_state=seed,
-        n_jobs=-1,
-        oob_score=True, 
-        bootstrap=True 
-    )
+#     rf = RandomForestRegressor(
+#         n_estimators=n_estimators,
+#         max_depth=max_depth,
+#         min_samples_split=min_split,
+#         min_samples_leaf=min_leaf,
+#         random_state=seed,
+#         n_jobs=-1,
+#         oob_score=True, 
+#         bootstrap=True 
+#     )
 
-    rf.fit(X_train_input, y_train_input)
+#     rf.fit(X_train_input, y_train_input)
 
-    oob_score = rf.oob_score_
+#     oob_score = rf.oob_score_
 
-    # Compute OOB RMSE (standardized)
-    oob_rmse = np.sqrt(mean_squared_error(y_train_input, rf.oob_prediction_))
-    #print(oob_rmse)
-    print(i)
+#     # Compute OOB RMSE (standardized)
+#     oob_rmse = np.sqrt(mean_squared_error(y_train_input, rf.oob_prediction_))
+#     #print(oob_rmse)
+#     print(i)
 
-    # Test RMSE
-    y_test_pred = rf.predict(X_test_input)
-    test_rmse = np.sqrt(mean_squared_error(y_test_input, y_test_pred))
+#     # Test RMSE
+#     y_test_pred = rf.predict(X_test_input)
+#     test_rmse = np.sqrt(mean_squared_error(y_test_input, y_test_pred))
 
-    seed_array.append(seed)
-    test_rmse_array.append(test_rmse)
-    oob_rmse_array.append(oob_rmse)
+#     seed_array.append(seed)
+#     test_rmse_array.append(test_rmse)
+#     oob_rmse_array.append(oob_rmse)
 
-    # Compute R² for training set
-    X_train_r2 = np.array(df.drop(columns=['Breakdown Voltage']))#, 'Number e-', 'Vibrational ZPE']))#, 'Vibrational ZPE', 'Number e-']))
-    y_train_r2 = np.array(df[['Breakdown Voltage']])
-    y_r2_pred = rf.predict(X_train_r2)
+#     # Compute R² for training set
+#     X_train_r2 = np.array(df.drop(columns=['Breakdown Voltage']))#, 'Number e-', 'Vibrational ZPE']))#, 'Vibrational ZPE', 'Number e-']))
+#     y_train_r2 = np.array(df[['Breakdown Voltage']])
+#     y_r2_pred = rf.predict(X_train_r2)
 
-    r2_test = r2_score(y_test_input, y_test_pred)
-    r2_test_array.append(r2_test)
+#     r2_test = r2_score(y_test_input, y_test_pred)
+#     r2_test_array.append(r2_test)
 
-    r2_train = r2_score(y_train_r2, y_r2_pred)
-    r2_train_array.append(r2_train)
+#     r2_train = r2_score(y_train_r2, y_r2_pred)
+#     r2_train_array.append(r2_train)
 
-rmse_df = pd.DataFrame({"Seed": seed_array, "Test_RMSE": test_rmse_array, "OOB_RMSE": oob_rmse_array, "R2_Train": r2_train_array, "R2_Test": r2_test_array})
-# rmse_df.to_csv("./results/rf_test_rmse_per_loop_small_2.csv", index=False)
-# print("Saved test RMSE per loop to ./results/rf_test_rmse_per_loop_small_2.csv")
+# rmse_df = pd.DataFrame({"Seed": seed_array, "Test_RMSE": test_rmse_array, "OOB_RMSE": oob_rmse_array, "R2_Train": r2_train_array, "R2_Test": r2_test_array})
+# # rmse_df.to_csv("./results/rf_test_rmse_per_loop_small_2.csv", index=False)
+# # print("Saved test RMSE per loop to ./results/rf_test_rmse_per_loop_small_2.csv")
     
 
 
 
 
-print(np.mean(oob_rmse_array))
-print(np.mean(test_rmse_array))
+# print(np.mean(oob_rmse_array))
+# print(np.mean(test_rmse_array))
 
-print(np.median(r2_test_array))
+# print(np.median(r2_test_array))
 
 # Convert to original units
 # oob_rmse = oob_rmse_std * scaler_label.scale_[0]
@@ -130,13 +130,13 @@ print(np.median(r2_test_array))
 
 # ------------ Train Final Model on 100% of Data? ----------------
 
-# seed = 73
+# seed = 149
 
 # # #----------Train initial model
 # data_train, data_test = train_test_split(df, test_size=0.1, random_state=seed)
 
-# X_train = data_train.drop(columns=['Breakdown Voltage', 'Number e-'])#, 'Vibrational ZPE', 'Number e-'])
-# X_test = data_test.drop(columns=['Breakdown Voltage', 'Number e-'])#, 'Vibrational ZPE', 'Number e-'])
+# X_train = data_train.drop(columns=['Breakdown Voltage', 'Number e-', 'Vibrational ZPE', 'Number e-'])
+# X_test = data_test.drop(columns=['Breakdown Voltage', 'Number e-', 'Vibrational ZPE', 'Number e-'])
 
 # y_train = data_train[['Breakdown Voltage']]
 # y_test = data_test[['Breakdown Voltage']]
@@ -181,7 +181,7 @@ print(np.median(r2_test_array))
 # print("Test RMSE:", test_rmse)
 
 # # Save the model to the results folder
-# joblib.dump(rf, "./models/seven_2_descriptors/rf_avg_model.pkl")
+# #joblib.dump(rf, "./models/seven_2_descriptors/rf_avg_model.pkl")
 
 
 
@@ -361,3 +361,85 @@ print(np.median(r2_test_array))
 #         print(names[i])
 #         print(y_actual[i])
 #         print(preds[i])
+
+
+
+
+
+
+
+
+#----------------------- Finds error in each prediction from the test set ---------------------------
+import joblib
+import numpy as np
+import pandas as pd
+
+# --- Load model ---
+model_path = "./models/eight_descriptors/rf_avg_model.pkl"
+model = joblib.load(model_path)
+
+# --- Load dataset ---
+columns = [
+    "Molecule",
+    "Vibrational ZPE",
+    "Polarizability",
+    "Dipole Moment",
+    "Adiabatic IE",
+    "Cohesive Energy",
+    "Breakdown Voltage",
+    "Molecular Mass",
+    "Number e-",
+    "Molecular Volume"
+]
+
+df = pd.read_csv("./data/test_seven_sorted.txt", sep="\t")
+df_names = pd.read_csv("./data/test_seven_names_sorted.txt", sep="\t")
+
+# --- Target column (CHANGE if this isn't right) ---
+target_col = "Breakdown Voltage"
+
+# --- Determine feature columns from the model itself ---
+if hasattr(model, "feature_names_in_"):
+    feature_cols = list(model.feature_names_in_)
+    print(f"Using {len(feature_cols)} feature columns stored in the model:")
+    print(feature_cols)
+else:
+    # Fallback: everything except Molecule name and target
+    feature_cols = [c for c in df.columns if c not in ("Molecule", target_col)]
+    print("Model has no feature_names_in_ attribute; falling back to:")
+    print(feature_cols)
+
+missing = [c for c in feature_cols if c not in df.columns]
+if missing:
+    raise ValueError(f"These feature columns expected by the model are missing from the dataset: {missing}")
+
+X = df[feature_cols]
+y_true = df[target_col].values
+
+# --- Predict ---
+y_pred = model.predict(X)
+
+# --- Compute errors ---
+abs_error = np.abs(y_true - y_pred)
+squared_error = (y_true - y_pred) ** 2
+
+# --- Get molecule identifiers (from df or df_names, whichever has them) ---
+if "Molecule" in df.columns:
+    molecule_ids = df["Molecule"].values
+elif "Molecule" in df_names.columns:
+    molecule_ids = df_names["Molecule"].values
+else:
+    molecule_ids = np.arange(len(df))
+
+# --- Assemble results ---
+results = pd.DataFrame({
+    "Molecule": molecule_ids,
+    "y_true": y_true,
+    "y_pred": y_pred,
+    "abs_error": abs_error,
+    "squared_error": squared_error
+})
+
+# --- Save to .txt (tab-separated, easy to reload with pd.read_csv(sep="\t")) ---
+output_path = "./results/rf_model_prediction_errors.txt"
+results.to_csv(output_path, sep="\t", index=False)
